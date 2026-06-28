@@ -2,40 +2,24 @@
 
 import React from "react";
 import {
-  ChevronLeft,
-  ChevronRight,
-  CalendarDays,
-  LayoutGrid,
-  List,
-  Plus,
-  CalendarCheck,
+  ChevronLeft, ChevronRight, LayoutGrid, CalendarDays, List, Plus, CalendarCheck,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store/useAppStore";
-import { format, addMonths, addWeeks, subMonths, subWeeks } from "date-fns";
+import { format } from "date-fns";
 
 interface CalendarToolbarProps {
   currentDate: Date;
   onNavigate: (dir: "prev" | "next" | "today") => void;
 }
 
-type ViewOption = {
-  key: "dayGridMonth" | "timeGridWeek" | "listWeek";
-  label: string;
-  icon: React.ComponentType<{ size?: number }>;
-  shortLabel: string;
-};
-
-const VIEW_OPTIONS: ViewOption[] = [
-  { key: "dayGridMonth", label: "Month",  icon: LayoutGrid,   shortLabel: "M" },
-  { key: "timeGridWeek", label: "Week",   icon: CalendarDays, shortLabel: "W" },
-  { key: "listWeek",     label: "List",   icon: List,         shortLabel: "L" },
+const VIEW_OPTIONS = [
+  { key: "dayGridMonth" as const, label: "Month", icon: LayoutGrid  },
+  { key: "timeGridWeek" as const, label: "Week",  icon: CalendarDays },
+  { key: "listWeek"     as const, label: "Agenda",icon: List        },
 ];
 
-export default function CalendarToolbar({
-  currentDate,
-  onNavigate,
-}: CalendarToolbarProps) {
-  const { calendarView, setCalendarView, openCreateModal } = useAppStore();
+export default function CalendarToolbar({ currentDate, onNavigate }: CalendarToolbarProps) {
+  const { calendarView, setCalendarView, openCreatePanel } = useAppStore();
 
   const dateLabel =
     calendarView === "dayGridMonth"
@@ -46,146 +30,100 @@ export default function CalendarToolbar({
 
   return (
     <div
-      className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0"
-      style={{
-        background: "var(--bg-surface)",
-        borderColor: "var(--border-subtle)",
-      }}
+      className="flex items-center justify-between px-5 py-3 border-b flex-shrink-0"
+      style={{ background: "var(--bg-surface)", borderColor: "var(--border-subtle)" }}
     >
-      {/* Left: Date navigation */}
-      <div className="flex items-center gap-2">
-        {/* Prev / Next */}
-        <div className="flex items-center">
+      {/* ── Left: navigation ── */}
+      <div className="flex items-center gap-3">
+        {/* Prev / Next group */}
+        <div
+          className="flex rounded-lg overflow-hidden border"
+          style={{ borderColor: "var(--border-subtle)" }}
+        >
           <button
             onClick={() => onNavigate("prev")}
-            className="p-1.5 rounded-l-md border-y border-l transition-all"
-            style={{
-              background: "var(--bg-elevated)",
-              borderColor: "var(--border-subtle)",
-              color: "var(--text-secondary)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "var(--bg-hover)";
-              e.currentTarget.style.color = "var(--text-primary)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "var(--bg-elevated)";
-              e.currentTarget.style.color = "var(--text-secondary)";
-            }}
-            aria-label="Previous"
+            className="p-2 transition-colors"
+            style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--text-primary)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "var(--bg-elevated)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
+            aria-label="Previous period"
           >
-            <ChevronLeft size={14} />
+            <ChevronLeft size={15} />
           </button>
           <button
             onClick={() => onNavigate("next")}
-            className="p-1.5 rounded-r-md border transition-all"
-            style={{
-              background: "var(--bg-elevated)",
-              borderColor: "var(--border-subtle)",
-              color: "var(--text-secondary)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "var(--bg-hover)";
-              e.currentTarget.style.color = "var(--text-primary)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "var(--bg-elevated)";
-              e.currentTarget.style.color = "var(--text-secondary)";
-            }}
-            aria-label="Next"
+            className="p-2 border-l transition-colors"
+            style={{ background: "var(--bg-elevated)", borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--text-primary)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "var(--bg-elevated)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
+            aria-label="Next period"
           >
-            <ChevronRight size={14} />
+            <ChevronRight size={15} />
           </button>
         </div>
 
-        {/* Today button */}
+        {/* Today */}
         <button
           onClick={() => onNavigate("today")}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-all"
-          style={{
-            background: "var(--bg-elevated)",
-            borderColor: "var(--border-subtle)",
-            color: "var(--text-secondary)",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--bg-hover)";
-            e.currentTarget.style.color = "var(--text-primary)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "var(--bg-elevated)";
-            e.currentTarget.style.color = "var(--text-secondary)";
-          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+          style={{ background: "var(--bg-elevated)", borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--text-primary)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "var(--bg-elevated)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
         >
-          <CalendarCheck size={11} />
+          <CalendarCheck size={12} />
           Today
         </button>
 
-        {/* Current date label */}
+        {/* Current period label */}
         <h2
-          className="text-sm font-semibold ml-1 tracking-tight"
+          className="text-base font-semibold tracking-tight"
           style={{ color: "var(--text-primary)" }}
         >
           {dateLabel}
         </h2>
       </div>
 
-      {/* Right: View switcher + New Task */}
-      <div className="flex items-center gap-2">
+      {/* ── Right: view switcher + new task ── */}
+      <div className="flex items-center gap-2.5">
         {/* View switcher */}
         <div
           className="flex rounded-lg overflow-hidden border"
           style={{ borderColor: "var(--border-subtle)" }}
         >
           {VIEW_OPTIONS.map((view, idx) => {
-            const Icon = view.icon;
+            const Icon     = view.icon;
             const isActive = calendarView === view.key;
             return (
               <button
                 key={view.key}
                 onClick={() => setCalendarView(view.key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all ${
-                  idx > 0 ? "border-l" : ""
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${idx > 0 ? "border-l" : ""}`}
                 style={{
-                  background: isActive ? "var(--maroon)" : "var(--bg-elevated)",
+                  background:  isActive ? "var(--maroon)" : "var(--bg-elevated)",
                   borderColor: "var(--border-subtle)",
-                  color: isActive ? "white" : "var(--text-secondary)",
+                  color:       isActive ? "white" : "var(--text-secondary)",
                 }}
-                onMouseEnter={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = "var(--bg-hover)";
-                    e.currentTarget.style.color = "var(--text-primary)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = "var(--bg-elevated)";
-                    e.currentTarget.style.color = "var(--text-secondary)";
-                  }
-                }}
-                title={view.label}
+                onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--text-primary)"; } }}
+                onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.background = "var(--bg-elevated)"; e.currentTarget.style.color = "var(--text-secondary)"; } }}
                 aria-pressed={isActive}
+                title={view.label}
               >
-                <Icon size={12} />
-                <span className="hidden sm:inline">{view.label}</span>
+                <Icon size={13} />
+                <span>{view.label}</span>
               </button>
             );
           })}
         </div>
 
-        {/* New Task CTA */}
+        {/* New Task — prominent CTA */}
         <button
-          onClick={() => openCreateModal()}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-          style={{ background: "var(--maroon)", color: "white" }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--maroon-light)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "var(--maroon)";
-          }}
+          onClick={() => openCreatePanel()}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all"
+          style={{ background: "var(--maroon)", color: "white", boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--maroon-light)"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.4)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "var(--maroon)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)"; }}
         >
-          <Plus size={13} />
+          <Plus size={14} />
           New Task
         </button>
       </div>

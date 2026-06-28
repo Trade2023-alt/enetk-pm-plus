@@ -1,61 +1,55 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&family=JetBrains+Mono:wght@400;500&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-
-
-/* ── CSS Design Tokens (ISA-101 HMI Color System) ───────────────────────── */
+/* ── CSS Design Tokens ───────────────────────────────────────────────────── */
 :root {
   /* Backgrounds */
-  --bg-base:        hsl(220, 15%, 11%);
-  --bg-surface:     hsl(220, 13%, 16%);
-  --bg-elevated:    hsl(220, 12%, 21%);
-  --bg-hover:       hsl(220, 11%, 26%);
+  --bg-base:        hsl(220, 15%, 10%);
+  --bg-surface:     hsl(220, 13%, 15%);
+  --bg-elevated:    hsl(220, 12%, 20%);
+  --bg-hover:       hsl(220, 11%, 25%);
 
   /* Borders */
-  --border-subtle:  hsl(220, 10%, 26%);
-  --border-strong:  hsl(220, 10%, 36%);
+  --border-subtle:  hsl(220, 10%, 24%);
+  --border-strong:  hsl(220, 10%, 34%);
 
   /* Text */
-  --text-primary:   hsl(220, 10%, 88%);
-  --text-secondary: hsl(220,  8%, 65%);
-  --text-muted:     hsl(220,  6%, 44%);
+  --text-primary:   hsl(220, 12%, 92%);
+  --text-secondary: hsl(220,  8%, 68%);
+  --text-muted:     hsl(220,  6%, 46%);
 
   /* Accents */
-  --maroon:         hsl(345, 65%, 38%);
-  --maroon-light:   hsl(345, 60%, 48%);
-  --maroon-subtle:  hsl(345, 40%, 20%);
+  --maroon:         hsl(345, 65%, 40%);
+  --maroon-light:   hsl(345, 60%, 52%);
+  --maroon-subtle:  hsl(345, 40%, 18%);
   --slate-accent:   hsl(215, 25%, 45%);
   --slate-subtle:   hsl(215, 20%, 22%);
 
-  /* Status (ONLY for conveying critical info per ISA-101) */
-  --status-overdue: hsl(  0, 70%, 55%);
-  --status-warning: hsl( 38, 80%, 55%);
-  --status-ok:      hsl(145, 50%, 42%);
-  --status-blocked: hsl(280, 50%, 50%);
-  --status-info:    hsl(210, 70%, 55%);
+  /* Status */
+  --status-overdue: hsl(  0, 72%, 58%);
+  --status-warning: hsl( 38, 82%, 58%);
+  --status-ok:      hsl(145, 52%, 44%);
+  --status-blocked: hsl(280, 50%, 52%);
+  --status-info:    hsl(210, 72%, 58%);
 
-  /* Sidebar dimensions */
-  --sidebar-w:      320px;
-  --sidebar-w-sm:   52px;
-  --nav-w:          220px;
-  --nav-w-sm:       56px;
+  /* Layout dimensions */
+  --sidebar-w:    300px;
+  --sidebar-w-sm: 52px;
+  --nav-w:        200px;
+  --nav-w-sm:     56px;
 
   /* Transitions */
   --transition-panel: 280ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* ── Base Resets ────────────────────────────────────────────────────────── */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+/* ── Base Resets ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
   -webkit-text-size-adjust: 100%;
-  font-feature-settings: "kern" 1, "liga" 1;
+  font-feature-settings: "kern" 1, "liga" 1, "cv11" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -68,205 +62,240 @@ body {
   line-height: 1.5;
 }
 
-/* ── Scrollbars (subtle, ISA-101 compliant) ─────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--slate-accent);
-}
+/* ── Scrollbars ─────────────────────────────────────────────────────────── */
+::-webkit-scrollbar              { width: 5px; height: 5px; }
+::-webkit-scrollbar-track        { background: transparent; }
+::-webkit-scrollbar-thumb        { background: var(--border-strong); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover  { background: var(--slate-accent); }
 
-/* ── Focus rings ────────────────────────────────────────────────────────── */
-:focus-visible {
-  outline: 2px solid var(--maroon-light);
-  outline-offset: 2px;
-}
+/* ── Focus rings ─────────────────────────────────────────────────────────── */
+:focus-visible { outline: 2px solid var(--maroon-light); outline-offset: 2px; }
 
-/* ── Selection ──────────────────────────────────────────────────────────── */
-::selection {
-  background: var(--maroon-subtle);
-  color: var(--text-primary);
-}
+/* ── Selection ───────────────────────────────────────────────────────────── */
+::selection { background: var(--maroon-subtle); color: var(--text-primary); }
 
-/* ── FullCalendar ISA-101 Overrides ─────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════ */
+/*  FULLCALENDAR — Complete ISA-101 Override                                  */
+/* ══════════════════════════════════════════════════════════════════════════ */
 .fc {
   font-family: "Inter", system-ui, sans-serif !important;
   font-size: 0.8125rem !important;
-  --fc-border-color: var(--border-subtle);
-  --fc-button-bg-color: var(--bg-surface);
-  --fc-button-border-color: var(--border-subtle);
-  --fc-button-hover-bg-color: var(--bg-hover);
+  --fc-border-color:              var(--border-subtle);
+  --fc-button-bg-color:           var(--bg-elevated);
+  --fc-button-border-color:       var(--border-subtle);
+  --fc-button-hover-bg-color:     var(--bg-hover);
   --fc-button-hover-border-color: var(--border-strong);
-  --fc-button-active-bg-color: var(--maroon);
-  --fc-button-active-border-color: var(--maroon);
-  --fc-button-text-color: var(--text-primary);
-  --fc-today-bg-color: hsl(345, 40%, 16%);
-  --fc-now-indicator-color: var(--maroon-light);
-  --fc-highlight-color: hsl(345, 40%, 18%);
-  --fc-page-bg-color: transparent;
-  --fc-neutral-bg-color: var(--bg-surface);
+  --fc-button-active-bg-color:    var(--maroon);
+  --fc-button-active-border-color:var(--maroon);
+  --fc-button-text-color:         var(--text-primary);
+  --fc-today-bg-color:            hsl(345, 45%, 13%);
+  --fc-now-indicator-color:       var(--maroon-light);
+  --fc-highlight-color:           hsl(345, 45%, 16%);
+  --fc-page-bg-color:             transparent;
+  --fc-neutral-bg-color:          var(--bg-surface);
   --fc-list-event-hover-bg-color: var(--bg-hover);
-  --fc-event-border-color: transparent;
+  --fc-event-border-color:        transparent;
 }
 
-/* Calendar header toolbar */
-.fc .fc-toolbar {
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 0 !important;
-  margin-bottom: 12px !important;
-}
-
-.fc .fc-toolbar-title {
-  font-size: 1rem !important;
-  font-weight: 600 !important;
-  color: var(--text-primary) !important;
-  letter-spacing: -0.01em;
-}
-
-/* Calendar header cells (Mon, Tue...) */
+/* ── Header day labels (MON, TUE…) ─────────────────────────────────────── */
 .fc .fc-col-header-cell {
   background: var(--bg-surface);
   border-color: var(--border-subtle) !important;
-  padding: 8px 0;
+  padding: 10px 0;
 }
-
 .fc .fc-col-header-cell-cushion {
   color: var(--text-secondary) !important;
-  font-weight: 500;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   text-decoration: none !important;
 }
 
-/* Day number cells */
+/* ── Day number cells ───────────────────────────────────────────────────── */
 .fc .fc-daygrid-day-number {
   color: var(--text-secondary) !important;
-  font-size: 0.75rem;
-  padding: 6px 8px !important;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 8px 10px !important;
   text-decoration: none !important;
+  line-height: 1;
 }
-
+.fc .fc-daygrid-day.fc-day-today {
+  background: var(--fc-today-bg-color) !important;
+}
 .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
   color: var(--maroon-light) !important;
-  font-weight: 600;
+  font-weight: 700;
+  background: var(--maroon-subtle);
+  border-radius: 6px;
+  min-width: 28px;
+  text-align: center;
 }
-
 .fc .fc-daygrid-day {
   border-color: var(--border-subtle) !important;
+  min-height: 100px;
 }
-
 .fc .fc-daygrid-day:hover {
-  background: hsl(220, 12%, 14%) !important;
+  background: hsl(220, 12%, 13%) !important;
+  cursor: pointer;
+}
+/* Click-to-add hint on empty cells */
+.fc .fc-daygrid-day:hover::after {
+  content: "+ Add task";
+  position: absolute;
+  bottom: 6px;
+  right: 8px;
+  font-size: 10px;
+  color: var(--text-muted);
+  opacity: 0;
+  animation: fadeInHint 0.2s 0.3s forwards;
+  pointer-events: none;
+}
+@keyframes fadeInHint {
+  to { opacity: 1; }
 }
 
-/* Events */
+/* ── Events ─────────────────────────────────────────────────────────────── */
 .fc .fc-event {
   border: none !important;
-  border-radius: 4px !important;
-  font-size: 0.75rem !important;
+  border-radius: 5px !important;
+  font-size: 0.72rem !important;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.15s;
+  transition: opacity 0.12s, transform 0.12s, box-shadow 0.12s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
 }
-
 .fc .fc-event:hover {
-  opacity: 0.9;
+  opacity: 0.92;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+.fc .fc-event-main         { padding: 3px 7px !important; }
+.fc .fc-daygrid-event      { margin: 1px 3px !important; }
+
+/* Multi-day spanning events */
+.fc .fc-daygrid-block-event .fc-event-main {
+  padding: 4px 8px !important;
+}
+.fc .fc-event-resizer-end {
+  width: 8px !important;
+  cursor: ew-resize;
+}
+.fc .fc-event-resizer-end:hover { opacity: 1 !important; }
+
+/* Sub-task dot events */
+.fc-subtask-dot {
+  border-radius: 3px !important;
+  padding: 0 3px !important;
+}
+.fc-subtask-dot .fc-event-title {
+  font-size: 10px;
+  opacity: 0.7;
 }
 
-.fc .fc-event-main {
-  padding: 2px 6px !important;
+/* ── Today indicator ─────────────────────────────────────────────────────── */
+.fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-frame {
+  border-top: 2px solid var(--maroon) !important;
 }
 
-/* Time grid */
-.fc .fc-timegrid-slot {
-  border-color: var(--border-subtle) !important;
-  height: 40px !important;
-}
-
-.fc .fc-timegrid-slot-label {
+/* ── "more" popover link ────────────────────────────────────────────────── */
+.fc .fc-daygrid-more-link {
   color: var(--text-muted) !important;
-  font-size: 0.7rem !important;
+  font-size: 10px !important;
+  font-weight: 600;
+  margin: 0 4px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
 }
-
-.fc .fc-timegrid-axis {
-  border-color: var(--border-subtle) !important;
-}
-
-/* Buttons */
-.fc .fc-button {
-  border-radius: 6px !important;
-  font-size: 0.75rem !important;
-  font-weight: 500 !important;
-  padding: 5px 10px !important;
-  letter-spacing: 0.02em;
-  transition: all 0.15s !important;
-}
-
-.fc .fc-button:focus {
-  box-shadow: 0 0 0 2px var(--maroon) !important;
-}
-
-/* Drop zone highlight when dragging from backlog */
-.fc-day.fc-highlight {
-  background: hsl(345, 40%, 18%) !important;
-}
-
-/* List view */
-.fc .fc-list-event:hover td {
-  background: var(--bg-hover) !important;
-}
-
-.fc .fc-list-day-cushion {
-  background: var(--bg-surface) !important;
-  color: var(--text-secondary) !important;
-  font-size: 0.75rem !important;
-}
-
-.fc .fc-list-event-title a {
+.fc .fc-daygrid-more-link:hover {
   color: var(--text-primary) !important;
+  background: var(--bg-hover) !important;
   text-decoration: none !important;
 }
 
-/* ── Utility Classes ─────────────────────────────────────────────────────── */
+/* ── Time grid ───────────────────────────────────────────────────────────── */
+.fc .fc-timegrid-slot         { border-color: var(--border-subtle) !important; height: 44px !important; }
+.fc .fc-timegrid-slot-minor   { border-color: transparent !important; }
+.fc .fc-timegrid-slot-label   { color: var(--text-muted) !important; font-size: 0.68rem !important; }
+.fc .fc-timegrid-axis         { border-color: var(--border-subtle) !important; }
+.fc .fc-timegrid-now-indicator-line { border-color: var(--maroon-light) !important; border-width: 2px; }
+.fc .fc-timegrid-now-indicator-arrow { border-top-color: var(--maroon-light) !important; }
+
+/* ── List view ───────────────────────────────────────────────────────────── */
+.fc .fc-list-event:hover td   { background: var(--bg-hover) !important; }
+.fc .fc-list-day-cushion      { background: var(--bg-surface) !important; color: var(--text-secondary) !important; font-size: 0.72rem !important; letter-spacing: 0.05em; }
+.fc .fc-list-event-title a    { color: var(--text-primary) !important; text-decoration: none !important; font-weight: 500; }
+.fc .fc-list-event-dot        { border-radius: 3px !important; }
+.fc .fc-list-empty            { background: transparent !important; color: var(--text-muted) !important; }
+
+/* ── Selection highlight ─────────────────────────────────────────────────── */
+.fc .fc-highlight { background: hsl(345, 45%, 18%) !important; border-radius: 4px; }
+.fc-day.fc-highlight { background: hsl(345, 45%, 16%) !important; }
+
+/* ── Popover ─────────────────────────────────────────────────────────────── */
+.fc .fc-popover {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6) !important;
+}
+.fc .fc-popover-header {
+  background: var(--bg-surface) !important;
+  border-radius: 10px 10px 0 0 !important;
+  color: var(--text-secondary) !important;
+  font-size: 11px !important;
+  padding: 8px 12px !important;
+}
+.fc .fc-popover-body { padding: 6px !important; }
+
+/* ── Buttons (if any native ones show) ──────────────────────────────────── */
+.fc .fc-button {
+  border-radius: 7px !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  padding: 6px 12px !important;
+  transition: all 0.15s !important;
+}
+.fc .fc-button:focus { box-shadow: 0 0 0 2px var(--maroon) !important; }
+
+/* ══════════════════════════════════════════════════════════════════════════ */
+/*  UTILITY CLASSES                                                            */
+/* ══════════════════════════════════════════════════════════════════════════ */
 @layer utilities {
+  /* Glassmorphism */
   .glass {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.07);
   }
-
   .glass-strong {
-    background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.09);
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.10);
   }
 
-  .panel-shadow {
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-  }
+  /* Shadows */
+  .panel-shadow { box-shadow: 0 2px 16px rgba(0, 0, 0, 0.35); }
+  .modal-shadow { box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65), 0 4px 24px rgba(0, 0, 0, 0.35); }
+  .card-shadow  { box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25); }
 
-  .modal-shadow {
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 4px 20px rgba(0, 0, 0, 0.3);
-  }
-
+  /* Status text colours */
   .status-overdue { color: var(--status-overdue); }
   .status-warning { color: var(--status-warning); }
   .status-ok      { color: var(--status-ok);      }
   .status-blocked { color: var(--status-blocked);  }
   .status-info    { color: var(--status-info);     }
 
-  .bg-status-overdue { background: hsl(0, 70%, 18%); border-color: var(--status-overdue); }
-  .bg-status-warning { background: hsl(38, 60%, 16%); border-color: var(--status-warning); }
-  .bg-status-ok      { background: hsl(145, 40%, 14%); border-color: var(--status-ok); }
-  .bg-status-blocked { background: hsl(280, 40%, 16%); border-color: var(--status-blocked); }
+  /* Status backgrounds */
+  .bg-status-overdue { background: hsl(0,  70%, 16%); border-color: var(--status-overdue); }
+  .bg-status-warning { background: hsl(38, 60%, 14%); border-color: var(--status-warning); }
+  .bg-status-ok      { background: hsl(145,40%, 13%); border-color: var(--status-ok); }
+  .bg-status-blocked { background: hsl(280,40%, 14%); border-color: var(--status-blocked); }
 
+  /* Text clamp */
   .truncate-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -274,16 +303,29 @@ body {
     overflow: hidden;
   }
 
-  /* Dragging state */
+  /* Drag states */
   .is-dragging {
     opacity: 0.5;
     cursor: grabbing !important;
     transform: scale(0.97);
     transition: none;
   }
-
   .drag-over {
-    background: hsl(345, 40%, 16%) !important;
+    background: hsl(345, 40%, 14%) !important;
     border-color: var(--maroon) !important;
+  }
+
+  /* Smooth fade-in */
+  .animate-fade-in { animation: fadeIn 180ms ease-out forwards; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Slide in from right */
+  .animate-slide-right { animation: slideInRight 220ms ease-out forwards; }
+  @keyframes slideInRight {
+    from { transform: translateX(20px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
   }
 }

@@ -1,22 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
-  Users,
-  AlertTriangle,
-  Clock,
-  Inbox,
-  TrendingUp,
-  Activity,
+  AlertTriangle, Clock, Inbox, TrendingUp, Activity,
+  CheckCircle2, CalendarX, Flag,
 } from "lucide-react";
-
-interface MetricCard {
-  label: string;
-  value: string | number;
-  sub?: string;
-  icon: React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>;
-  status?: "neutral" | "warning" | "danger" | "ok";
-}
 
 interface MetricsBarProps {
   totalUsers: number;
@@ -26,140 +14,143 @@ interface MetricsBarProps {
   flaggedCount: number;
 }
 
-export default function MetricsBar({
-  totalUsers,
-  overdueCount,
-  unscheduledCount,
-  weeklyHours,
-  flaggedCount,
-}: MetricsBarProps) {
-  const metrics: MetricCard[] = [
-    {
-      label: "Team Members",
-      value: totalUsers,
-      icon: Users,
-      status: "neutral",
-      sub: "registered",
-    },
-    {
-      label: "Unscheduled",
-      value: unscheduledCount,
-      icon: Inbox,
-      status: unscheduledCount > 5 ? "warning" : "neutral",
-      sub: "in backlog",
-    },
-    {
-      label: "Overdue",
-      value: overdueCount,
-      icon: AlertTriangle,
-      status: overdueCount > 0 ? "danger" : "ok",
-      sub: "tasks",
-    },
-    {
-      label: "Flagged",
-      value: flaggedCount,
-      icon: AlertTriangle,
-      status: flaggedCount > 0 ? "warning" : "ok",
-      sub: "need info",
-    },
-    {
-      label: "Week Hours",
-      value: `${weeklyHours.used}h / ${weeklyHours.estimated}h`,
-      icon: Clock,
-      status:
-        weeklyHours.used > weeklyHours.estimated
-          ? "danger"
-          : weeklyHours.used > weeklyHours.estimated * 0.8
-          ? "warning"
-          : "neutral",
-      sub: weeklyHours.estimated > 0
-        ? `${Math.round((weeklyHours.used / weeklyHours.estimated) * 100)}% utilized`
-        : "this week",
-    },
-  ];
+// Live clock
+function LiveClock() {
+  const [time, setTime] = useState(() => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+  useEffect(() => {
+    const id = setInterval(() => setTime(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })), 10000);
+    return () => clearInterval(id);
+  }, []);
+  return <span className="font-mono text-xs">{time}</span>;
+}
 
-  const statusColors: Record<string, string> = {
+export default function MetricsBar({
+  totalUsers, overdueCount, unscheduledCount, weeklyHours, flaggedCount,
+}: MetricsBarProps) {
+  const hourPct = weeklyHours.estimated > 0
+    ? Math.min(100, Math.round((weeklyHours.used / weeklyHours.estimated) * 100))
+    : 0;
+
+  return (
+    <div
+      className="flex items-stretch border-b flex-shrink-0 overflow-x-auto"
+      style={{ background: "var(--bg-surface)", borderColor: "var(--border-subtle)", height: "44px" }}
+    >
+      {/* Brand label */}
+      <div
+        className="flex items-center gap-2 px-4 border-r flex-shrink-0"
+        style={{ borderColor: "var(--border-subtle)" }}
+      >
+        <Activity size={12} style={{ color: "var(--maroon-light)" }} />
+        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+          Dashboard
+        </span>
+      </div>
+
+      {/* ── Overdue ── */}
+      <MetricChip
+        icon={CalendarX}
+        value={overdueCount}
+        label="Overdue"
+        status={overdueCount > 0 ? "danger" : "ok"}
+        pulse={overdueCount > 0}
+      />
+
+      {/* ── Unscheduled ── */}
+      <MetricChip
+        icon={Inbox}
+        value={unscheduledCount}
+        label="Unscheduled"
+        status={unscheduledCount > 8 ? "warning" : "neutral"}
+      />
+
+      {/* ── Flagged ── */}
+      <MetricChip
+        icon={Flag}
+        value={flaggedCount}
+        label="Flagged"
+        status={flaggedCount > 0 ? "warning" : "neutral"}
+        pulse={flaggedCount > 0}
+      />
+
+      {/* ── Weekly Hours bar ── */}
+      <div
+        className="flex items-center gap-3 px-4 border-r flex-shrink-0 cursor-default"
+        style={{ borderColor: "var(--border-subtle)" }}
+      >
+        <Clock size={12} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+        <div>
+          <div className="flex items-baseline gap-1.5 mb-0.5">
+            <span className="text-xs font-semibold leading-none" style={{ color: hourPct > 100 ? "var(--status-overdue)" : "var(--text-primary)" }}>
+              {weeklyHours.used}
+              <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>/{weeklyHours.estimated}h</span>
+            </span>
+            <span className="text-[10px] leading-none" style={{ color: "var(--text-muted)" }}>{hourPct}%</span>
+          </div>
+          {/* Mini progress bar */}
+          <div className="w-20 h-1 rounded-full overflow-hidden" style={{ background: "var(--border-subtle)" }}>
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${hourPct}%`,
+                background: hourPct > 100 ? "var(--status-overdue)"
+                  : hourPct > 80  ? "var(--status-warning)"
+                  : "var(--status-ok)",
+              }}
+            />
+          </div>
+        </div>
+        <span className="text-[10px] leading-none" style={{ color: "var(--text-muted)" }}>this week</span>
+      </div>
+
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* ── Clock ── */}
+      <div className="flex items-center px-4 gap-1.5" style={{ color: "var(--text-muted)" }}>
+        <LiveClock />
+        <span className="text-[10px] opacity-50">local</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Single metric chip ──────────────────────────────────────────────────────
+function MetricChip({
+  icon: Icon, value, label, status, pulse = false,
+}: {
+  icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>;
+  value: number;
+  label: string;
+  status: "neutral" | "warning" | "danger" | "ok";
+  pulse?: boolean;
+}) {
+  const colorMap = {
     neutral: "var(--text-secondary)",
     warning: "var(--status-warning)",
     danger:  "var(--status-overdue)",
     ok:      "var(--text-muted)",
   };
+  const color = colorMap[status];
 
   return (
     <div
-      className="flex items-center gap-px border-b flex-shrink-0 overflow-x-auto"
-      style={{
-        background: "var(--bg-surface)",
-        borderColor: "var(--border-subtle)",
-      }}
+      className="flex items-center gap-2 px-4 border-r flex-shrink-0 cursor-default transition-colors"
+      style={{ borderColor: "var(--border-subtle)" }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
     >
-      {/* Brand label */}
-      <div
-        className="flex items-center gap-2 px-4 py-2.5 border-r flex-shrink-0"
-        style={{ borderColor: "var(--border-subtle)" }}
-      >
-        <Activity size={12} style={{ color: "var(--maroon)" }} />
-        <span
-          className="text-[10px] font-semibold uppercase tracking-widest"
-          style={{ color: "var(--text-muted)" }}
-        >
-          Dashboard
+      <Icon
+        size={12}
+        style={{ color, flexShrink: 0, animation: pulse ? "pulse 2s infinite" : undefined }}
+      />
+      <div className="flex items-baseline gap-1">
+        <span className="text-sm font-bold leading-none tabular-nums" style={{ color }}>
+          {value}
         </span>
-      </div>
-
-      {metrics.map((m, idx) => {
-        const Icon = m.icon;
-        const color = statusColors[m.status ?? "neutral"];
-        const isAlert = m.status === "warning" || m.status === "danger";
-
-        return (
-          <div
-            key={idx}
-            className="flex items-center gap-2.5 px-4 py-2.5 border-r transition-colors flex-shrink-0"
-            style={{ borderColor: "var(--border-subtle)" }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "var(--bg-hover)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-            }}
-          >
-            <Icon
-              size={13}
-              style={{ color, flexShrink: 0 }}
-              className={isAlert ? "animate-pulse-soft" : ""}
-            />
-            <div>
-              <div
-                className="text-xs font-semibold leading-none"
-                style={{ color }}
-              >
-                {m.value}
-              </div>
-              <div
-                className="text-[10px] leading-none mt-0.5"
-                style={{ color: "var(--text-muted)" }}
-              >
-                {m.label}
-              </div>
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Separator + time indicator */}
-      <div className="flex-1" />
-      <div
-        className="px-4 py-2.5 flex-shrink-0 text-[10px]"
-        style={{ color: "var(--text-muted)" }}
-      >
-        <span className="font-mono">
-          {new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+        <span className="text-[10px] leading-none" style={{ color: "var(--text-muted)" }}>
+          {label}
         </span>
-        <span className="ml-1 opacity-50">local</span>
       </div>
     </div>
   );
