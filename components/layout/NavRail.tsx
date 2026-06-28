@@ -25,9 +25,10 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", icon: CalendarDays,   label: "Calendar"  },
-  { href: "/projects",  icon: FolderKanban,   label: "Projects"  },
-  { href: "/admin",     icon: Users,          label: "Team",      adminOnly: true },
+  { href: "/dashboard",  icon: CalendarDays,   label: "Calendar"   },
+  { href: "/projects",   icon: FolderKanban,   label: "Projects"   },
+  { href: "/customers",  icon: Users,          label: "Customers"  },
+  { href: "/admin",      icon: Settings,       label: "Team",      adminOnly: true },
 ];
 
 export default function NavRail() {

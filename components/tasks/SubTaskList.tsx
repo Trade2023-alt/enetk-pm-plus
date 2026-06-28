@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
-import { Plus, Trash2, CheckSquare, Square, GripVertical } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { Plus, Trash2, CheckSquare, Square, Calendar } from "lucide-react";
 import type { SubTask } from "@/lib/supabase/types";
 
 interface SubTaskListProps {
-  subTasks: Partial<SubTask>[];
-  onChange: (subTasks: Partial<SubTask>[]) => void;
+  subTasks: Partial<SubTask & { scheduled_date?: string }>[];
+  onChange: (subTasks: Partial<SubTask & { scheduled_date?: string }>[]) => void;
+  showDates?: boolean; // show date picker per sub-task
 }
 
-export default function SubTaskList({ subTasks, onChange }: SubTaskListProps) {
+export default function SubTaskList({ subTasks, onChange, showDates = true }: SubTaskListProps) {
   const [newTitle, setNewTitle] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -21,126 +22,107 @@ export default function SubTaskList({ subTasks, onChange }: SubTaskListProps) {
   const addSubTask = () => {
     const title = newTitle.trim();
     if (!title) return;
-    onChange([
-      ...subTasks,
-      {
-        title,
-        is_completed: false,
-        sort_order: subTasks.length,
-      },
-    ]);
+    onChange([...subTasks, { title, is_completed: false, sort_order: subTasks.length }]);
     setNewTitle("");
     inputRef.current?.focus();
   };
 
-  const toggleSubTask = (idx: number) => {
-    onChange(
-      subTasks.map((s, i) =>
-        i === idx ? { ...s, is_completed: !s.is_completed } : s
-      )
-    );
-  };
+  const toggle = (idx: number) =>
+    onChange(subTasks.map((s, i) => i === idx ? { ...s, is_completed: !s.is_completed } : s));
 
-  const removeSubTask = (idx: number) => {
+  const remove = (idx: number) =>
     onChange(subTasks.filter((_, i) => i !== idx));
-  };
 
-  const updateTitle = (idx: number, title: string) => {
-    onChange(
-      subTasks.map((s, i) => (i === idx ? { ...s, title } : s))
-    );
-  };
+  const updateTitle = (idx: number, title: string) =>
+    onChange(subTasks.map((s, i) => i === idx ? { ...s, title } : s));
+
+  const updateDate = (idx: number, date: string) =>
+    onChange(subTasks.map((s, i) => i === idx ? { ...s, scheduled_date: date || undefined } : s));
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <label
-          className="text-xs font-medium"
-          style={{ color: "var(--text-secondary)" }}
-        >
+      {/* Header + progress */}
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
           Sub-Tasks
           {subTasks.length > 0 && (
-            <span
-              className="ml-1.5 text-[10px]"
-              style={{ color: "var(--text-muted)" }}
-            >
+            <span className="ml-1.5 text-[10px]" style={{ color: "var(--text-muted)" }}>
               {completedCount}/{subTasks.length}
             </span>
           )}
         </label>
       </div>
 
-      {/* Progress bar */}
       {subTasks.length > 0 && (
-        <div
-          className="h-1 rounded-full mb-3 overflow-hidden"
-          style={{ background: "var(--border-subtle)" }}
-        >
+        <div className="h-1 rounded-full mb-2 overflow-hidden" style={{ background: "var(--border-subtle)" }}>
           <div
             className="h-full rounded-full transition-all duration-300"
-            style={{
-              width: `${progress}%`,
-              background:
-                progress === 100 ? "var(--status-ok)" : "var(--maroon)",
-            }}
+            style={{ width: `${progress}%`, background: progress === 100 ? "var(--status-ok)" : "var(--maroon)" }}
           />
         </div>
       )}
 
-      {/* Sub-task items */}
-      <div className="space-y-1 mb-2">
+      {/* Sub-task rows */}
+      <div className="space-y-1 mb-1.5">
         {subTasks.map((st, idx) => (
           <div
             key={idx}
-            className="flex items-center gap-2 group rounded-lg px-2 py-1.5 transition-colors"
+            className="flex items-center gap-2 rounded-lg px-2 py-1.5 group transition-colors"
             style={{ background: "var(--bg-surface)" }}
           >
+            {/* Check toggle */}
             <button
-              onClick={() => toggleSubTask(idx)}
+              onClick={() => toggle(idx)}
               className="flex-shrink-0 transition-colors"
-              style={{
-                color: st.is_completed
-                  ? "var(--status-ok)"
-                  : "var(--text-muted)",
-              }}
+              style={{ color: st.is_completed ? "var(--status-ok)" : "var(--text-muted)" }}
             >
-              {st.is_completed ? (
-                <CheckSquare size={13} />
-              ) : (
-                <Square size={13} />
-              )}
+              {st.is_completed ? <CheckSquare size={13} /> : <Square size={13} />}
             </button>
 
+            {/* Title */}
             <input
               type="text"
               value={st.title ?? ""}
               onChange={(e) => updateTitle(idx, e.target.value)}
-              className="flex-1 bg-transparent text-xs outline-none"
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSubTask(); } }}
+              className="flex-1 bg-transparent text-xs outline-none min-w-0"
               style={{
-                color: st.is_completed
-                  ? "var(--text-muted)"
-                  : "var(--text-primary)",
+                color: st.is_completed ? "var(--text-muted)" : "var(--text-primary)",
                 textDecoration: st.is_completed ? "line-through" : "none",
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addSubTask();
-                }
               }}
             />
 
+            {/* Date picker (when showDates) */}
+            {showDates && (
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {!st.scheduled_date && (
+                  <Calendar size={10} style={{ color: "var(--text-muted)" }} />
+                )}
+                <input
+                  type="date"
+                  value={st.scheduled_date ?? ""}
+                  onChange={(e) => updateDate(idx, e.target.value)}
+                  className="text-[10px] font-mono rounded border px-1 py-0.5 outline-none transition-colors"
+                  style={{
+                    background: "var(--bg-elevated)",
+                    borderColor: st.scheduled_date ? "var(--maroon)" : "var(--border-subtle)",
+                    color: st.scheduled_date ? "var(--text-primary)" : "var(--text-muted)",
+                    colorScheme: "dark",
+                    width: st.scheduled_date ? "88px" : "30px",
+                    cursor: "pointer",
+                  }}
+                  title={st.scheduled_date ? `Scheduled: ${st.scheduled_date}` : "Set date"}
+                />
+              </div>
+            )}
+
+            {/* Remove */}
             <button
-              onClick={() => removeSubTask(idx)}
+              onClick={() => remove(idx)}
               className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
               style={{ color: "var(--text-muted)" }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.color = "var(--status-overdue)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.color = "var(--text-muted)")
-              }
+              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--status-overdue)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
             >
               <Trash2 size={11} />
             </button>
@@ -148,7 +130,7 @@ export default function SubTaskList({ subTasks, onChange }: SubTaskListProps) {
         ))}
       </div>
 
-      {/* Add new sub-task */}
+      {/* Add row */}
       <div
         className="flex items-center gap-2 rounded-lg px-2 py-1.5 border border-dashed"
         style={{ borderColor: "var(--border-subtle)" }}
@@ -159,24 +141,16 @@ export default function SubTaskList({ subTasks, onChange }: SubTaskListProps) {
           type="text"
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addSubTask();
-            }
-          }}
-          placeholder="Add sub-task... (Enter to add)"
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSubTask(); } }}
+          placeholder="Add sub-task… (Enter to add)"
           className="flex-1 bg-transparent text-xs outline-none"
           style={{ color: "var(--text-primary)" }}
         />
         {newTitle && (
           <button
             onClick={addSubTask}
-            className="text-[10px] px-2 py-0.5 rounded transition-colors"
-            style={{
-              background: "var(--maroon-subtle)",
-              color: "var(--maroon-light)",
-            }}
+            className="text-[10px] px-2 py-0.5 rounded transition-colors flex-shrink-0"
+            style={{ background: "var(--maroon-subtle)", color: "var(--maroon-light)" }}
           >
             Add
           </button>

@@ -5,18 +5,15 @@ import type { Task, Project, TaskWithRelations } from "@/lib/supabase/types";
 // ── UI State ──────────────────────────────────────────────────────────────────
 
 interface UIState {
-  // Sidebar panels
   backlogSidebarOpen: boolean;
   navRailExpanded: boolean;
   toggleBacklogSidebar: () => void;
   setBacklogSidebarOpen: (open: boolean) => void;
   toggleNavRail: () => void;
 
-  // Calendar view
   calendarView: "dayGridMonth" | "timeGridWeek" | "listWeek";
   setCalendarView: (view: "dayGridMonth" | "timeGridWeek" | "listWeek") => void;
 
-  // Active filters
   selectedProjectId: string | null;
   setSelectedProjectId: (id: string | null) => void;
 }
@@ -30,17 +27,26 @@ interface DragState {
   clearDrag: () => void;
 }
 
-// ── Modal State ───────────────────────────────────────────────────────────────
+// ── Task Panel State (replaces modal) ─────────────────────────────────────────
 
-interface ModalState {
-  taskModalOpen: boolean;
-  taskModalMode: "create" | "edit";
+interface PanelState {
+  // Task panel (slide-in from right)
+  taskPanelOpen: boolean;
+  taskPanelMode: "create" | "edit";
   editingTask: TaskWithRelations | null;
-  defaultDate: string | null; // Pre-fill date when clicking empty calendar cell
+  defaultDate: string | null;
+  defaultEndDate: string | null;
+  openCreatePanel: (defaultDate?: string, defaultEndDate?: string) => void;
+  openEditPanel: (task: TaskWithRelations) => void;
+  closeTaskPanel: () => void;
+
+  // Legacy aliases so existing components don't break
+  taskModalOpen: boolean;
   openCreateModal: (defaultDate?: string) => void;
   openEditModal: (task: TaskWithRelations) => void;
   closeTaskModal: () => void;
 
+  // Project modal
   projectModalOpen: boolean;
   openProjectModal: () => void;
   closeProjectModal: () => void;
@@ -51,9 +57,14 @@ interface ModalState {
 interface DataState {
   tasks: TaskWithRelations[];
   projects: Project[];
+  customers: any[];
   setTasks: (tasks: TaskWithRelations[]) => void;
   setProjects: (projects: Project[]) => void;
-  updateTask: (id: string, updates: Partial<Task>) => void;
+  setCustomers: (customers: any[]) => void;
+  updateTask: (id: string, updates: Partial<Task & {
+    scheduled_end_date?: string | null;
+    daily_hours_plan?: Record<string, number>;
+  }>) => void;
   addTask: (task: TaskWithRelations) => void;
   removeTask: (id: string) => void;
   addProject: (project: Project) => void;
@@ -61,12 +72,12 @@ interface DataState {
 
 // ── Combined Store ────────────────────────────────────────────────────────────
 
-type AppStore = UIState & DragState & ModalState & DataState;
+type AppStore = UIState & DragState & PanelState & DataState;
 
 export const useAppStore = create<AppStore>()(
   persist(
     (set, get) => ({
-      // UI State
+      // ── UI ──
       backlogSidebarOpen: true,
       navRailExpanded: true,
       calendarView: "dayGridMonth",
@@ -80,7 +91,7 @@ export const useAppStore = create<AppStore>()(
       setCalendarView: (view) => set({ calendarView: view }),
       setSelectedProjectId: (id) => set({ selectedProjectId: id }),
 
-      // Drag State
+      // ── Drag ──
       draggingTask: null,
       isDraggingFromBacklog: false,
       setDraggingTask: (task, fromBacklog = false) =>
@@ -88,38 +99,50 @@ export const useAppStore = create<AppStore>()(
       clearDrag: () =>
         set({ draggingTask: null, isDraggingFromBacklog: false }),
 
-      // Modal State
-      taskModalOpen: false,
-      taskModalMode: "create",
+      // ── Task Panel ──
+      taskPanelOpen: false,
+      taskPanelMode: "create",
       editingTask: null,
       defaultDate: null,
+      defaultEndDate: null,
       projectModalOpen: false,
 
-      openCreateModal: (defaultDate) =>
+      openCreatePanel: (defaultDate, defaultEndDate) =>
         set({
-          taskModalOpen: true,
-          taskModalMode: "create",
+          taskPanelOpen: true,
+          taskPanelMode: "create",
           editingTask: null,
           defaultDate: defaultDate ?? null,
+          defaultEndDate: defaultEndDate ?? null,
         }),
-      openEditModal: (task) =>
+      openEditPanel: (task) =>
         set({
-          taskModalOpen: true,
-          taskModalMode: "edit",
+          taskPanelOpen: true,
+          taskPanelMode: "edit",
           editingTask: task,
           defaultDate: null,
+          defaultEndDate: null,
         }),
-      closeTaskModal: () =>
-        set({ taskModalOpen: false, editingTask: null, defaultDate: null }),
+      closeTaskPanel: () =>
+        set({ taskPanelOpen: false, editingTask: null, defaultDate: null, defaultEndDate: null }),
+
+      // Legacy aliases → forward to panel
+      get taskModalOpen() { return get().taskPanelOpen; },
+      openCreateModal: (defaultDate) => get().openCreatePanel(defaultDate),
+      openEditModal: (task) => get().openEditPanel(task),
+      closeTaskModal: () => get().closeTaskPanel(),
+
       openProjectModal: () => set({ projectModalOpen: true }),
       closeProjectModal: () => set({ projectModalOpen: false }),
 
-      // Data Cache
+      // ── Data ──
       tasks: [],
       projects: [],
+      customers: [],
 
       setTasks: (tasks) => set({ tasks }),
       setProjects: (projects) => set({ projects }),
+      setCustomers: (customers) => set({ customers }),
       updateTask: (id, updates) =>
         set((s) => ({
           tasks: s.tasks.map((t) =>
@@ -134,7 +157,6 @@ export const useAppStore = create<AppStore>()(
     }),
     {
       name: "enetk-pm-ui-state",
-      // Only persist UI preferences, NOT data cache or modal state
       partialize: (state) => ({
         backlogSidebarOpen: state.backlogSidebarOpen,
         navRailExpanded: state.navRailExpanded,
