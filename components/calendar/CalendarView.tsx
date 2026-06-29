@@ -43,6 +43,7 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
     backlogSidebarOpen,
     navRailExpanded,
     setCalendarApi,
+    selectedEmployeeId,
   } = useAppStore();
 
   useEffect(() => {
@@ -58,6 +59,7 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
     tasks
       .filter((t) => t.scheduled_date && t.status !== "completed" && !t.is_template && t.on_calendar)
       .forEach((task) => {
+        const taskAssignedTo = task.assigned_to;
         const project = projects.find((p) => p.id === task.project_id);
         const color   = getTaskColor(task, project?.color);
         
@@ -73,6 +75,21 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
             const hrs = typeof val === "object" && val !== null ? (val.hours ?? 0) : (typeof val === "number" ? val : 0);
             if (hrs <= 0) return;
 
+            // Find daily subtask if any
+            let dailyAssignedTo = taskAssignedTo;
+            let dailySubTask = null;
+            if (typeof val === "object" && val !== null && val.sub_task_id) {
+              dailySubTask = (task.sub_tasks ?? []).find((st: any) => st.id === val.sub_task_id);
+              if (dailySubTask && dailySubTask.assigned_to) {
+                dailyAssignedTo = dailySubTask.assigned_to;
+              }
+            }
+
+            // Apply employee filter
+            if (selectedEmployeeId && dailyAssignedTo !== selectedEmployeeId) {
+              return;
+            }
+
             list.push({
               id:              `${task.id}__${dateStr}`, // unique ID per day
               title:           task.task_name,
@@ -83,10 +100,15 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
               textColor:       "#E1E4EB",
               editable:        true,
               durationEditable: false, // daily events have fixed 1-day duration
-              extendedProps:   { task, project, isTask: true, isDailyPlanned: true, plannedDate: dateStr, plannedHours: hrs },
+              extendedProps:   { task, project, isTask: true, isDailyPlanned: true, plannedDate: dateStr, plannedHours: hrs, assignedUser: dailySubTask?.assigned_to ? usersList.find(u => u.id === dailySubTask.assigned_to) : null },
             });
           });
         } else {
+          // Apply employee filter
+          if (selectedEmployeeId && taskAssignedTo !== selectedEmployeeId) {
+            return;
+          }
+
           // Fallback: render single event spanning from scheduled_date to scheduled_end_date
           const endDate = (task as any).scheduled_end_date;
           const endStr = endDate
@@ -109,7 +131,7 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
         }
       });
     return list;
-  }, [tasks, projects]);
+  }, [tasks, projects, selectedEmployeeId, usersList]);
 
   // ── Sub-task dot events ─────────────────────────────────────────────────
   const subTaskEvents = useMemo(() => {
@@ -120,6 +142,11 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
       (task.sub_tasks ?? []).forEach((st: any) => {
         if (!st.scheduled_date || st.is_completed) return;
         
+        // Apply employee filter
+        if (selectedEmployeeId && st.assigned_to !== selectedEmployeeId) {
+          return;
+        }
+
         const assignedUser = st.assigned_to ? usersList.find(u => u.id === st.assigned_to) : null;
 
         dots.push({
@@ -137,11 +164,13 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
       });
     });
     return dots;
-  }, [tasks, projects, usersList]);
+  }, [tasks, projects, usersList, selectedEmployeeId]);
 
   // ── Project banner events ───────────────────────────────────────────────
-  const projectEvents = useMemo(() =>
-    projects
+  const projectEvents = useMemo(() => {
+    if (selectedEmployeeId) return [];
+
+    return projects
       .filter((p) => p.start_date && p.status !== "completed" && p.status !== "archived")
       .map((proj) => {
         const endStr = proj.end_date
@@ -162,8 +191,8 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
           classNames:      ["fc-project-banner"],
           extendedProps:   { project: proj, isProject: true },
         };
-      })
-  , [projects]);
+      });
+  }, [projects, selectedEmployeeId]);
 
   const calendarEvents = useMemo(() => [...taskEvents, ...subTaskEvents, ...projectEvents], [taskEvents, subTaskEvents, projectEvents]);
 

@@ -19,7 +19,19 @@ const VIEW_OPTIONS = [
 ];
 
 export default function CalendarToolbar({ currentDate, onNavigate }: CalendarToolbarProps) {
-  const { calendarView, setCalendarView, openCreatePanel } = useAppStore();
+  const { calendarView, setCalendarView, openCreatePanel, selectedEmployeeId, setSelectedEmployeeId } = useAppStore();
+  const [users, setUsers] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    fetch("/api/users")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.users)) {
+          setUsers(data.users);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const dateLabel =
     calendarView === "dayGridMonth"
@@ -85,6 +97,27 @@ export default function CalendarToolbar({ currentDate, onNavigate }: CalendarToo
 
       {/* ── Right: view switcher + new task ── */}
       <div className="flex items-center gap-2.5">
+        {/* Employee Filter */}
+        <select
+          value={selectedEmployeeId ?? ""}
+          onChange={(e) => setSelectedEmployeeId(e.target.value || null)}
+          className="text-xs rounded-lg border px-2.5 py-1.5 outline-none transition-colors cursor-pointer"
+          style={{
+            background: "var(--bg-elevated)",
+            borderColor: selectedEmployeeId ? "var(--maroon)" : "var(--border-subtle)",
+            color: selectedEmployeeId ? "var(--text-primary)" : "var(--text-secondary)",
+            height: "30px",
+          }}
+          title="Filter by Assigned Employee"
+        >
+          <option value="">All Employees</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.full_name || u.email.split("@")[0]}
+            </option>
+          ))}
+        </select>
+
         {/* View switcher */}
         <div
           className="flex rounded-lg overflow-hidden border"

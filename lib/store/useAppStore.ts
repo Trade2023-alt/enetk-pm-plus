@@ -17,6 +17,9 @@ interface UIState {
   selectedProjectId: string | null;
   setSelectedProjectId: (id: string | null) => void;
 
+  selectedEmployeeId: string | null;
+  setSelectedEmployeeId: (id: string | null) => void;
+
   calendarApi: any | null;
   setCalendarApi: (api: any | null) => void;
 }
@@ -86,6 +89,7 @@ export const useAppStore = create<AppStore>()(
       navRailExpanded: true,
       calendarView: "dayGridMonth",
       selectedProjectId: null,
+      selectedEmployeeId: null,
 
       toggleBacklogSidebar: () =>
         set((s) => ({ backlogSidebarOpen: !s.backlogSidebarOpen })),
@@ -94,6 +98,7 @@ export const useAppStore = create<AppStore>()(
         set((s) => ({ navRailExpanded: !s.navRailExpanded })),
       setCalendarView: (view) => set({ calendarView: view }),
       setSelectedProjectId: (id) => set({ selectedProjectId: id }),
+      setSelectedEmployeeId: (id) => set({ selectedEmployeeId: id }),
       calendarApi: null,
       setCalendarApi: (api) => set({ calendarApi: api }),
 
@@ -173,6 +178,7 @@ export const useAppStore = create<AppStore>()(
         navRailExpanded: state.navRailExpanded,
         calendarView: state.calendarView,
         selectedProjectId: state.selectedProjectId,
+        selectedEmployeeId: state.selectedEmployeeId,
       }),
     }
   )
