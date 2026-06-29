@@ -50,7 +50,7 @@ export default function ProjectModal({
   const [name, setName]               = useState("");
   const [description, setDescription] = useState("");
   const [color, setColor]             = useState(COLOR_SWATCHES[0].hex);
-  const [status, setStatus]           = useState<"active" | "on_hold" | "completed" | "archived">("active");
+  const [status, setStatus]           = useState<"opportunity" | "estimate" | "active" | "on_hold" | "completed" | "invoiced" | "paid" | "archived">("opportunity");
   const [customerId, setCustomerId]   = useState("");
   const [customers, setCustomers]     = useState<any[]>([]);
   const [saving, setSaving]           = useState(false);
@@ -82,7 +82,7 @@ export default function ProjectModal({
       setName("");
       setDescription("");
       setColor(COLOR_SWATCHES[0].hex);
-      setStatus("active");
+      setStatus("opportunity");
       setCustomerId("");
     }
     setError(null);
@@ -363,7 +363,16 @@ export default function ProjectModal({
                 Status
               </label>
               <div className="grid grid-cols-2 gap-2">
-                {(["active", "on_hold", "completed", "archived"] as const).map((s) => (
+                {([
+                  "opportunity",
+                  "estimate",
+                  "active",
+                  "on_hold",
+                  "completed",
+                  "invoiced",
+                  "paid",
+                  "archived"
+                ] as const).map((s) => (
                   <button
                     key={s}
                     onClick={() => setStatus(s)}

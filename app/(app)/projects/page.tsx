@@ -7,10 +7,14 @@ import ProjectModal from "@/components/projects/ProjectModal";
 import type { Project } from "@/lib/supabase/types";
 
 const STATUS_COLORS: Record<string, string> = {
-  active:    "var(--status-ok)",
-  on_hold:   "var(--status-warning)",
-  completed: "var(--text-muted)",
-  archived:  "var(--text-muted)",
+  opportunity: "var(--text-muted)",
+  estimate:    "var(--text-secondary)",
+  active:      "var(--status-ok)",
+  on_hold:     "var(--status-warning)",
+  completed:   "var(--maroon-light)",
+  invoiced:    "hsl(200, 70%, 50%)",
+  paid:        "var(--status-ok)",
+  archived:    "var(--text-muted)",
 };
 
 export default function ProjectsPage() {
