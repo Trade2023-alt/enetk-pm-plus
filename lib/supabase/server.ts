@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { currentUser } from "@clerk/nextjs/server";
 
 // Server-side client with service role key — bypasses RLS
 // ONLY use in API routes / Server Actions, NEVER expose to client
@@ -20,4 +21,43 @@ export function createServerClient(): ReturnType<typeof createClient<any>> {
       persistSession: false,
     },
   });
+}
+
+// ── Auto-Sync Clerk User to Supabase Users Table ─────────────────────────────
+export async function ensureUserExists(userId: string): Promise<void> {
+  const supabase = createServerClient();
+
+  // 1. Check if user already exists
+  const { data: existingUser } = await supabase
+    .from("users")
+    .select("id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (existingUser) return;
+
+  // 2. Fetch profile from Clerk
+  try {
+    const user = await currentUser();
+    if (!user || user.id !== userId) return;
+
+    const email = user.emailAddresses?.[0]?.emailAddress ?? "";
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ") || null;
+    const role = (user.publicMetadata?.role as string) ?? "user";
+
+    // 3. Upsert user
+    await supabase.from("users").upsert(
+      {
+        id: userId,
+        email,
+        full_name: fullName,
+        avatar_url: user.imageUrl ?? null,
+        role,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "id" }
+    );
+  } catch (err) {
+    console.error("Failed to auto-sync Clerk user to Supabase:", err);
+  }
 }

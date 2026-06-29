@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, ensureUserExists } from "@/lib/supabase/server";
 
 // GET /api/projects
 export async function GET(_req: NextRequest) {
@@ -22,6 +22,8 @@ export async function GET(_req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  await ensureUserExists(userId);
 
   const supabase = createServerClient();
   const body = await req.json();
