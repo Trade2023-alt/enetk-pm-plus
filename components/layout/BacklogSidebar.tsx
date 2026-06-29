@@ -62,18 +62,23 @@ export default function BacklogSidebar() {
   }, [backlogSidebarOpen, tasks]);
 
   // ── Backlog tasks: unscheduled OR unassigned ─────────────────────────────
-  const backlogTasks = tasks.filter(
-    (t) => !t.scheduled_date && t.status !== "completed"
-  );
+  const backlogTasks = tasks.filter((t) => {
+    // If a template project is selected, show its template tasks
+    const isProjTemplate = filterProject !== "all" && filterProject !== "unassigned" && projects.find(p => p.id === filterProject)?.is_template;
+    if (t.is_template) {
+      return isProjTemplate && t.project_id === filterProject;
+    }
+    return !t.scheduled_date && t.status !== "completed";
+  });
 
   const filteredBacklog =
     filterProject === "all"
-      ? backlogTasks
+      ? backlogTasks.filter((t) => !t.is_template)
       : filterProject === "unassigned"
       ? backlogTasks.filter((t) => !t.project_id)
       : backlogTasks.filter((t) => t.project_id === filterProject);
 
-  const flaggedCount = backlogTasks.filter((t) => t.is_flagged).length;
+  const flaggedCount = backlogTasks.filter((t) => t.is_flagged && !t.is_template).length;
 
   const open = backlogSidebarOpen;
 
@@ -278,7 +283,7 @@ export default function BacklogSidebar() {
                   <option value="unassigned">⚠ Unassigned</option>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name}
+                      {p.is_template ? `[Template] ${p.name}` : p.name}
                     </option>
                   ))}
                 </select>

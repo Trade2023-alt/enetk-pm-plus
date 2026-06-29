@@ -132,6 +132,7 @@ export type Database = {
           customer_id: string | null
           description: string | null
           id: string
+          is_template: boolean
           name: string
           status: string
           updated_at: string | null
@@ -143,6 +144,7 @@ export type Database = {
           customer_id?: string | null
           description?: string | null
           id?: string
+          is_template?: boolean
           name: string
           status?: string
           updated_at?: string | null
@@ -154,6 +156,7 @@ export type Database = {
           customer_id?: string | null
           description?: string | null
           id?: string
+          is_template?: boolean
           name?: string
           status?: string
           updated_at?: string | null
@@ -236,6 +239,7 @@ export type Database = {
           estimated_hours: number | null
           id: string
           is_flagged: boolean | null
+          is_template: boolean
           job_number: string | null
           precursor_task_id: string | null
           priority: string
@@ -260,6 +264,7 @@ export type Database = {
           estimated_hours?: number | null
           id?: string
           is_flagged?: boolean | null
+          is_template?: boolean
           job_number?: string | null
           precursor_task_id?: string | null
           priority?: string
@@ -284,6 +289,7 @@ export type Database = {
           estimated_hours?: number | null
           id?: string
           is_flagged?: boolean | null
+          is_template?: boolean
           job_number?: string | null
           precursor_task_id?: string | null
           priority?: string

@@ -31,7 +31,7 @@ export default function CalendarView() {
   // ── Build main task events ──────────────────────────────────────────────
   const taskEvents = useMemo(() =>
     tasks
-      .filter((t) => t.scheduled_date && t.status !== "completed")
+      .filter((t) => t.scheduled_date && t.status !== "completed" && !t.is_template)
       .map((task) => {
         const project = projects.find((p) => p.id === task.project_id);
         const color   = getTaskColor(task, project?.color);

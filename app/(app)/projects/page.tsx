@@ -23,6 +23,7 @@ export default function ProjectsPage() {
   const [modalOpen,  setModalOpen]  = useState(false);
   const [editProj,   setEditProj]   = useState<any>(null);
   const [customers,  setCustomers]  = useState<any[]>([]);
+  const [activeTab,  setActiveTab]  = useState<"active" | "completed" | "templates">("active");
 
   useEffect(() => {
     async function load() {
@@ -48,6 +49,12 @@ export default function ProjectsPage() {
     if (t.status === "completed") acc[t.project_id].done++;
     return acc;
   }, {});
+
+  const filteredProjects = projects.filter((p) => {
+    if (activeTab === "templates") return p.is_template;
+    if (activeTab === "completed") return !p.is_template && (p.status === "completed" || p.status === "archived" || p.status === "paid");
+    return !p.is_template && p.status !== "completed" && p.status !== "archived" && p.status !== "paid";
+  });
 
   const openCreate = () => { setEditProj(null); setModalOpen(true); };
   const openEdit   = (p: any) => { setEditProj(p); setModalOpen(true); };
@@ -81,19 +88,52 @@ export default function ProjectsPage() {
         </button>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-2 border-b flex-shrink-0" style={{ borderColor: "var(--border-subtle)" }}>
+        {(["active", "completed", "templates"] as const).map((tab) => {
+          const isActive = activeTab === tab;
+          const label = tab === "active" ? "Active Projects" : tab === "completed" ? "Completed / Archived" : "Templates";
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className="px-4 py-2 text-xs font-semibold border-b-2 -mb-px transition-colors capitalize"
+              style={{
+                borderColor: isActive ? "var(--maroon)" : "transparent",
+                color: isActive ? "var(--maroon-light)" : "var(--text-secondary)",
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Grid */}
-      {projects.length === 0 ? (
+      {filteredProjects.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 gap-3">
           <FolderKanban size={40} style={{ color: "var(--text-muted)" }} />
-          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>No projects yet</p>
-          <button onClick={openCreate} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold" style={{ background: "var(--maroon)", color: "white" }}>
-            <Plus size={12} /> Create your first project
-          </button>
+          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+            {activeTab === "active"
+              ? "No active projects"
+              : activeTab === "completed"
+              ? "No completed projects"
+              : "No template projects"}
+          </p>
+          {activeTab === "templates" ? (
+            <button onClick={openCreate} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold" style={{ background: "var(--maroon)", color: "white" }}>
+              <Plus size={12} /> Create a template project
+            </button>
+          ) : activeTab === "active" ? (
+            <button onClick={openCreate} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold" style={{ background: "var(--maroon)", color: "white" }}>
+              <Plus size={12} /> Create your first project
+            </button>
+          ) : null}
         </div>
       ) : (
         <div className="overflow-y-auto flex-1">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {projects.map((proj) => {
+            {filteredProjects.map((proj) => {
               const counts   = taskCountByProject[proj.id] ?? { total: 0, done: 0 };
               const pct      = counts.total > 0 ? Math.round((counts.done / counts.total) * 100) : 0;
               const customer = customers.find((c) => c.id === (proj as any).customer_id);

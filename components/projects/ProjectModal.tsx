@@ -33,6 +33,7 @@ interface ProjectModalProps {
     color: string;
     status: string;
     customer_id?: string | null;
+    is_template?: boolean;
   } | null;
   onSaved: () => void;
 }
@@ -53,17 +54,30 @@ export default function ProjectModal({
   const [status, setStatus]           = useState<"opportunity" | "estimate" | "active" | "on_hold" | "completed" | "invoiced" | "paid" | "archived">("opportunity");
   const [customerId, setCustomerId]   = useState("");
   const [customers, setCustomers]     = useState<any[]>([]);
+  const [isTemplate, setIsTemplate]   = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [cloneTasks, setCloneTasks]   = useState(true);
+  const [templateProjectsList, setTemplateProjectsList] = useState<any[]>([]);
   const [saving, setSaving]           = useState(false);
   const [deleting, setDeleting]       = useState(false);
   const [error, setError]             = useState<string | null>(null);
 
-  // Fetch customers list
+  // Fetch customers and template projects list
   useEffect(() => {
     if (open) {
       fetch("/api/customers")
         .then((r) => r.json())
         .then((data) => {
           if (data.customers) setCustomers(data.customers);
+        })
+        .catch(console.error);
+
+      fetch("/api/projects")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.projects) {
+            setTemplateProjectsList(data.projects.filter((p: any) => p.is_template));
+          }
         })
         .catch(console.error);
     }
@@ -78,12 +92,16 @@ export default function ProjectModal({
       setColor(editProject.color ?? COLOR_SWATCHES[0].hex);
       setStatus(editProject.status as any);
       setCustomerId(editProject.customer_id ?? "");
+      setIsTemplate(editProject.is_template ?? false);
     } else {
       setName("");
       setDescription("");
       setColor(COLOR_SWATCHES[0].hex);
       setStatus("opportunity");
       setCustomerId("");
+      setIsTemplate(false);
+      setSelectedTemplateId("");
+      setCloneTasks(true);
     }
     setError(null);
   }, [open, editProject]);
@@ -111,7 +129,10 @@ export default function ProjectModal({
         description: description || null,
         color,
         status,
-        customer_id: customerId || null
+        customer_id: customerId || null,
+        is_template: isTemplate,
+        clone_from_project_id: !editProject ? (selectedTemplateId || null) : null,
+        clone_tasks: !editProject ? cloneTasks : false,
       };
 
       if (editProject) {
@@ -245,6 +266,54 @@ export default function ProjectModal({
               >
                 <AlertTriangle size={12} />
                 {error}
+              </div>
+            )}
+
+            {/* Load from Template */}
+            {!editProject && templateProjectsList.length > 0 && (
+              <div className="rounded-lg p-3 border space-y-2.5" style={{ background: "var(--bg-surface)", borderColor: "var(--border-subtle)" }}>
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider font-semibold mb-1" style={{ color: "var(--text-muted)" }}>
+                    Load from Template
+                  </label>
+                  <select
+                    value={selectedTemplateId}
+                    onChange={(e) => {
+                      const tId = e.target.value;
+                      setSelectedTemplateId(tId);
+                      const tProj = templateProjectsList.find(p => p.id === tId);
+                      if (tProj) {
+                        setName(tProj.name);
+                        setDescription(tProj.description ?? "");
+                        setColor(tProj.color ?? COLOR_SWATCHES[0].hex);
+                        setCustomerId(tProj.customer_id ?? "");
+                      }
+                    }}
+                    className="w-full px-2.5 py-1.5 rounded border text-xs outline-none transition-all cursor-pointer"
+                    style={{
+                      background: "var(--bg-elevated)",
+                      borderColor: "var(--border-subtle)",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    <option value="">-- Start from Scratch --</option>
+                    {templateProjectsList.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {selectedTemplateId && (
+                  <label className="flex items-center gap-2 cursor-pointer text-xs" style={{ color: "var(--text-secondary)" }}>
+                    <input
+                      type="checkbox"
+                      checked={cloneTasks}
+                      onChange={(e) => setCloneTasks(e.target.checked)}
+                      className="rounded accent-maroon"
+                    />
+                    <span>Clone template tasks & sub-tasks</span>
+                  </label>
+                )}
               </div>
             )}
 
@@ -387,6 +456,19 @@ export default function ProjectModal({
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Save as Template */}
+            <div className="pt-1">
+              <label className="flex items-center gap-2 cursor-pointer text-xs" style={{ color: "var(--text-secondary)" }}>
+                <input
+                  type="checkbox"
+                  checked={isTemplate}
+                  onChange={(e) => setIsTemplate(e.target.checked)}
+                  className="rounded accent-maroon"
+                />
+                <span>Save as Template (excludes from active calendar/backlog)</span>
+              </label>
             </div>
           </div>
 
