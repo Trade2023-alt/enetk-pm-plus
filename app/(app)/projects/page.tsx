@@ -24,6 +24,12 @@ export default function ProjectsPage() {
   const [editProj,   setEditProj]   = useState<any>(null);
   const [customers,  setCustomers]  = useState<any[]>([]);
   const [activeTab,  setActiveTab]  = useState<"active" | "completed" | "templates">("active");
+  const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [selectedCustomer, setSelectedCustomer] = useState<string>("");
+
+  useEffect(() => {
+    setSelectedStatus("");
+  }, [activeTab]);
 
   useEffect(() => {
     async function load() {
@@ -51,9 +57,30 @@ export default function ProjectsPage() {
   }, {});
 
   const filteredProjects = projects.filter((p) => {
-    if (activeTab === "templates") return p.is_template;
-    if (activeTab === "completed") return !p.is_template && (p.status === "completed" || p.status === "archived" || p.status === "paid");
-    return !p.is_template && p.status !== "completed" && p.status !== "archived" && p.status !== "paid";
+    // 1. Tab filtering
+    if (activeTab === "templates") {
+      if (!p.is_template) return false;
+    } else if (activeTab === "completed") {
+      if (p.is_template || (p.status !== "completed" && p.status !== "archived" && p.status !== "paid")) return false;
+    } else {
+      if (p.is_template || p.status === "completed" || p.status === "archived" || p.status === "paid") return false;
+    }
+
+    // 2. Customer filtering
+    if (selectedCustomer) {
+      if (selectedCustomer === "none") {
+        if (p.customer_id) return false;
+      } else {
+        if (p.customer_id !== selectedCustomer) return false;
+      }
+    }
+
+    // 3. Status filtering
+    if (selectedStatus) {
+      if (p.status !== selectedStatus) return false;
+    }
+
+    return true;
   });
 
   const openCreate = () => { setEditProj(null); setModalOpen(true); };
@@ -107,6 +134,93 @@ export default function ProjectsPage() {
             </button>
           );
         })}
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-4 bg-[var(--bg-surface)] p-3.5 rounded-xl border flex-shrink-0" style={{ borderColor: "var(--border-subtle)" }}>
+        {/* Customer Filter */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: "var(--text-muted)" }}>
+            Customer
+          </label>
+          <select
+            value={selectedCustomer}
+            onChange={(e) => setSelectedCustomer(e.target.value)}
+            className="text-xs rounded-lg border px-3 py-1.5 outline-none cursor-pointer"
+            style={{
+              background: "var(--bg-elevated)",
+              borderColor: selectedCustomer ? "var(--maroon)" : "var(--border-subtle)",
+              color: selectedCustomer ? "var(--text-primary)" : "var(--text-secondary)",
+              minWidth: "160px",
+              height: "32px",
+            }}
+            onFocus={(e) => (e.target.style.borderColor = "var(--maroon)")}
+            onBlur={(e) => (e.target.style.borderColor = selectedCustomer ? "var(--maroon)" : "var(--border-subtle)")}
+          >
+            <option value="">All Customers</option>
+            <option value="none">No Customer Link</option>
+            {customers.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Status Filter */}
+        {activeTab !== "templates" && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: "var(--text-muted)" }}>
+              Status
+            </label>
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="text-xs rounded-lg border px-3 py-1.5 outline-none cursor-pointer"
+              style={{
+                background: "var(--bg-elevated)",
+                borderColor: selectedStatus ? "var(--maroon)" : "var(--border-subtle)",
+                color: selectedStatus ? "var(--text-primary)" : "var(--text-secondary)",
+                minWidth: "140px",
+                height: "32px",
+              }}
+              onFocus={(e) => (e.target.style.borderColor = "var(--maroon)")}
+              onBlur={(e) => (e.target.style.borderColor = selectedStatus ? "var(--maroon)" : "var(--border-subtle)")}
+            >
+              <option value="">All Statuses</option>
+              {activeTab === "active" ? (
+                <>
+                  <option value="opportunity">Opportunity</option>
+                  <option value="estimate">Estimate</option>
+                  <option value="active">Active</option>
+                  <option value="on_hold">On Hold</option>
+                  <option value="invoiced">Invoiced</option>
+                </>
+              ) : (
+                <>
+                  <option value="completed">Completed</option>
+                  <option value="paid">Paid</option>
+                  <option value="archived">Archived</option>
+                </>
+              )}
+            </select>
+          </div>
+        )}
+
+        {/* Reset button */}
+        {(selectedCustomer || selectedStatus) && (
+          <button
+            onClick={() => { setSelectedCustomer(""); setSelectedStatus(""); }}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors align-self-end mt-4"
+            style={{
+              background: "var(--bg-hover)",
+              color: "var(--text-secondary)",
+              height: "32px",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--border-subtle)"; e.currentTarget.style.color = "var(--text-primary)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
+          >
+            Reset Filters
+          </button>
+        )}
       </div>
 
       {/* Grid */}
