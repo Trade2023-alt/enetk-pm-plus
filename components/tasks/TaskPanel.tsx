@@ -92,7 +92,7 @@ export default function TaskPanel() {
   const [assignedTo,    setAssignedTo]    = useState("");
   const [description,   setDescription]   = useState("");
   const [subTasks,      setSubTasks]      = useState<any[]>([]);
-  const [dailyPlan,     setDailyPlan]     = useState<Record<string,number>>({});
+  const [dailyPlan,     setDailyPlan]     = useState<Record<string,any>>({});
   const [precursorId,   setPrecursorId]   = useState<string>("");
   const [saving,        setSaving]        = useState(false);
   const [deleting,      setDeleting]      = useState(false);
@@ -166,18 +166,30 @@ export default function TaskPanel() {
     setSaving(true);
     setError(null);
 
+    // Sync sub-task scheduled_date and on_calendar from daily hours plan
+    const updatedSubTasks = subTasks.map((st) => {
+      const matchedDateEntry = Object.entries(dailyPlan).find(([_, val]) => {
+        return typeof val === "object" && val !== null && val.sub_task_id === st.id;
+      });
+      if (matchedDateEntry) {
+        return { ...st, scheduled_date: matchedDateEntry[0], on_calendar: true };
+      }
+      return st;
+    });
+
     const payload = {
       task_name:          taskName.trim(),
       project_id:         projectId || null,
       scheduled_date:     startDate || null,
       scheduled_end_date: endDate || null,
+      on_calendar:        !!startDate,
       priority,
       status,
       assigned_to:        assignedTo || null,
       description:        description || null,
       daily_hours_plan:   Object.keys(dailyPlan).length ? dailyPlan : null,
       precursor_task_id:  precursorId || null,
-      sub_tasks:          subTasks,
+      sub_tasks:          updatedSubTasks,
     };
 
     try {
@@ -479,6 +491,7 @@ export default function TaskPanel() {
                     plan={dailyPlan}
                     disabled={isReadOnly}
                     onChange={isReadOnly ? () => {} : setDailyPlan}
+                    subTasks={subTasks}
                   />
                 </div>
               )}

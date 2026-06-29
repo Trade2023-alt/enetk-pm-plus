@@ -1,6 +1,20 @@
 import type { Task } from "@/lib/supabase/types";
 import { format, isPast, differenceInDays, parseISO } from "date-fns";
 
+export function getUserInitials(fullName?: string | null, email?: string | null): string {
+  if (fullName) {
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length > 1) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  if (email) {
+    return email.split("@")[0].slice(0, 2).toUpperCase();
+  }
+  return "";
+}
+
 /**
  * Determines if a task should be flagged (missing critical data).
  * Auto-flagging also happens at the DB trigger level.

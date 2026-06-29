@@ -161,7 +161,7 @@ export default function BacklogSidebar() {
     if (t.is_template) {
       return isProjTemplate && t.project_id === filterProject;
     }
-    return !t.scheduled_date && t.status !== "completed";
+    return !t.on_calendar && t.status !== "completed";
   });
 
   const filteredBacklog =

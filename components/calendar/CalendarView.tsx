@@ -18,6 +18,18 @@ interface CalendarViewProps {
 }
 
 export default function CalendarView({ calendarRef }: CalendarViewProps) {
+  const [usersList, setUsersList] = React.useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/users")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.users)) {
+          setUsersList(data.users);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const {
     calendarView,
@@ -41,35 +53,63 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
   }, [calendarRef, setCalendarApi]);
 
   // ── Build main task events ──────────────────────────────────────────────
-  const taskEvents = useMemo(() =>
+  const taskEvents = useMemo(() => {
+    const list: any[] = [];
     tasks
-      .filter((t) => t.scheduled_date && t.status !== "completed" && !t.is_template)
-      .map((task) => {
+      .filter((t) => t.scheduled_date && t.status !== "completed" && !t.is_template && t.on_calendar)
+      .forEach((task) => {
         const project = projects.find((p) => p.id === task.project_id);
         const color   = getTaskColor(task, project?.color);
-        const endDate = (task as any).scheduled_end_date;
+        
+        const dailyPlan = task.daily_hours_plan as Record<string, any> | null;
+        const hasDailyHours = dailyPlan && Object.values(dailyPlan).some((val) => {
+          const hrs = typeof val === "object" && val !== null ? (val.hours ?? 0) : (typeof val === "number" ? val : 0);
+          return hrs > 0;
+        });
 
-        // FullCalendar end for all-day multi-day must be exclusive (day after)
-        const endStr = endDate
-          ? format(addDays(new Date(endDate), 1), "yyyy-MM-dd")
-          : undefined;
+        if (hasDailyHours) {
+          // Task has a daily hours plan: split into daily events for days with hrs > 0
+          Object.entries(dailyPlan!).forEach(([dateStr, val]) => {
+            const hrs = typeof val === "object" && val !== null ? (val.hours ?? 0) : (typeof val === "number" ? val : 0);
+            if (hrs <= 0) return;
 
-        return {
-          id:              task.id,
-          title:           task.task_name,
-          start:           task.scheduled_date!,
-          end:             endStr,
-          allDay:          true,
-          backgroundColor: color,
-          borderColor:     "transparent",
-          textColor:       "#E1E4EB",
-          editable:        true,
-          durationEditable: true,   // ← enable right-edge resize
-          extendedProps:   { task, project, isTask: true },
-        };
-      }),
-    [tasks, projects]
-  );
+            list.push({
+              id:              `${task.id}__${dateStr}`, // unique ID per day
+              title:           task.task_name,
+              start:           dateStr,
+              allDay:          true,
+              backgroundColor: color,
+              borderColor:     "transparent",
+              textColor:       "#E1E4EB",
+              editable:        true,
+              durationEditable: false, // daily events have fixed 1-day duration
+              extendedProps:   { task, project, isTask: true, isDailyPlanned: true, plannedDate: dateStr, plannedHours: hrs },
+            });
+          });
+        } else {
+          // Fallback: render single event spanning from scheduled_date to scheduled_end_date
+          const endDate = (task as any).scheduled_end_date;
+          const endStr = endDate
+            ? format(addDays(new Date(endDate), 1), "yyyy-MM-dd")
+            : undefined;
+
+          list.push({
+            id:              task.id,
+            title:           task.task_name,
+            start:           task.scheduled_date!,
+            end:             endStr,
+            allDay:          true,
+            backgroundColor: color,
+            borderColor:     "transparent",
+            textColor:       "#E1E4EB",
+            editable:        true,
+            durationEditable: true,
+            extendedProps:   { task, project, isTask: true },
+          });
+        }
+      });
+    return list;
+  }, [tasks, projects]);
 
   // ── Sub-task dot events ─────────────────────────────────────────────────
   const subTaskEvents = useMemo(() => {
@@ -79,6 +119,9 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
       const color   = getTaskColor(task, project?.color);
       (task.sub_tasks ?? []).forEach((st: any) => {
         if (!st.scheduled_date || st.is_completed) return;
+        
+        const assignedUser = st.assigned_to ? usersList.find(u => u.id === st.assigned_to) : null;
+
         dots.push({
           id:              `st-${st.id ?? Math.random()}`,
           title:           `· ${st.title}`,
@@ -89,12 +132,12 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
           textColor:       "#C8CDD8",
           editable:        true, // sub-tasks are draggable!
           classNames:      ["fc-subtask-dot"],
-          extendedProps:   { task, isSubTask: true, subTaskId: st.id, taskId: task.id },
+          extendedProps:   { task, isSubTask: true, subTaskId: st.id, taskId: task.id, assignedUser },
         });
       });
     });
     return dots;
-  }, [tasks, projects]);
+  }, [tasks, projects, usersList]);
 
   // ── Project banner events ───────────────────────────────────────────────
   const projectEvents = useMemo(() =>
@@ -186,6 +229,33 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
       }
 
       // Default: Task
+      const isDailyPlanned = event.extendedProps?.isDailyPlanned;
+      if (isDailyPlanned) {
+        const [taskId, oldDateStr] = event.id.split("__");
+        const task = tasks.find(t => t.id === taskId);
+        if (task) {
+          const currentPlan = { ...(task.daily_hours_plan as Record<string, any> ?? {}) };
+          const hrsVal = currentPlan[oldDateStr];
+          delete currentPlan[oldDateStr];
+          currentPlan[newDate] = hrsVal;
+
+          updateTask(taskId, { daily_hours_plan: currentPlan } as any);
+          try {
+            const res = await fetch(`/api/tasks/${taskId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ daily_hours_plan: currentPlan }),
+            });
+            if (!res.ok) throw new Error();
+          } catch {
+            revert();
+            const restoredPlan = { ...(task.daily_hours_plan as Record<string, any> ?? {}) };
+            updateTask(taskId, { daily_hours_plan: restoredPlan } as any);
+          }
+        }
+        return;
+      }
+
       const taskId  = event.id;
       updateTask(taskId, { scheduled_date: newDate, scheduled_end_date: endDate } as any);
       try {
@@ -402,7 +472,7 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
         select={handleSelect}
         eventClick={handleEventClick}
         eventContent={(arg: EventContentArg) => (
-          <CalendarEventCard arg={arg} />
+          <CalendarEventCard arg={arg} usersList={usersList} />
         )}
         height="100%"
         weekends={true}

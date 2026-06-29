@@ -6,9 +6,10 @@ import { eachDayOfInterval, format, parseISO, isWeekend } from "date-fns";
 interface DailyHourPlannerProps {
   startDate: string;           // "yyyy-MM-dd"
   endDate: string;             // "yyyy-MM-dd"
-  plan: Record<string, number>; // { "2026-07-01": 4 }
-  onChange: (plan: Record<string, number>) => void;
+  plan: Record<string, any>;   // { "2026-07-01": 4 } or { "2026-07-01": { hours: 4, sub_task_id: "id" } }
+  onChange: (plan: Record<string, any>) => void;
   disabled?: boolean;
+  subTasks?: any[];
 }
 
 export default function DailyHourPlanner({
@@ -17,6 +18,7 @@ export default function DailyHourPlanner({
   plan,
   onChange,
   disabled = false,
+  subTasks = [],
 }: DailyHourPlannerProps) {
   const days = useMemo(() => {
     try {
@@ -32,12 +34,30 @@ export default function DailyHourPlanner({
   if (days.length < 2) return null;
 
   const totalHours = days.reduce((sum, d) => {
-    return sum + (plan[format(d, "yyyy-MM-dd")] ?? 0);
+    const entry = plan[format(d, "yyyy-MM-dd")];
+    const hrs = typeof entry === "object" && entry !== null ? (entry.hours ?? 0) : (typeof entry === "number" ? entry : 0);
+    return sum + hrs;
   }, 0);
 
   const setHours = (dateKey: string, value: string) => {
     const h = Math.max(0, Math.min(24, parseFloat(value) || 0));
-    onChange({ ...plan, [dateKey]: h });
+    const current = plan[dateKey];
+    const sub_task_id = typeof current === "object" && current !== null ? current.sub_task_id : null;
+    
+    onChange({
+      ...plan,
+      [dateKey]: { hours: h, sub_task_id }
+    });
+  };
+
+  const setSubTaskId = (dateKey: string, subTaskId: string | null) => {
+    const current = plan[dateKey];
+    const hours = typeof current === "object" && current !== null ? current.hours : (typeof current === "number" ? current : 0);
+
+    onChange({
+      ...plan,
+      [dateKey]: { hours, sub_task_id: subTaskId }
+    });
   };
 
   return (
@@ -56,7 +76,11 @@ export default function DailyHourPlanner({
           const key     = format(day, "yyyy-MM-dd");
           const dayName = format(day, "EEE");
           const dayNum  = format(day, "MMM d");
-          const hrs     = plan[key] ?? 0;
+          
+          const entry   = plan[key];
+          const hrs     = typeof entry === "object" && entry !== null ? (entry.hours ?? 0) : (typeof entry === "number" ? entry : 0);
+          const subTaskId = typeof entry === "object" && entry !== null ? (entry.sub_task_id ?? "") : "";
+
           const isWknd  = isWeekend(day);
           const pct     = hrs > 0 ? Math.min(100, (hrs / 10) * 100) : 0;
 
@@ -99,8 +123,8 @@ export default function DailyHourPlanner({
                 />
               </div>
 
-              {/* Hours input */}
-              <div className="flex items-center gap-1 flex-shrink-0">
+              {/* Hours input + Sub-task select */}
+              <div className="flex items-center gap-1.5 flex-shrink-0">
                 <input
                   type="number"
                   value={hrs || ""}
@@ -119,7 +143,29 @@ export default function DailyHourPlanner({
                   onFocus={(e) => (e.target.style.borderColor = "var(--maroon)")}
                   onBlur={(e) => (e.target.style.borderColor = hrs > 0 ? "var(--maroon)" : "var(--border-subtle)")}
                 />
-                <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>h</span>
+                <span className="text-[10px] mr-1" style={{ color: "var(--text-muted)" }}>h</span>
+
+                {subTasks && subTasks.length > 0 && (
+                  <select
+                    value={subTaskId ?? ""}
+                    disabled={disabled}
+                    onChange={(e) => setSubTaskId(key, e.target.value || null)}
+                    className="text-[10px] rounded border px-1 py-0.5 outline-none transition-colors disabled:opacity-70 max-w-[110px] cursor-pointer"
+                    style={{
+                      background: "var(--bg-elevated)",
+                      borderColor: subTaskId ? "var(--maroon)" : "var(--border-subtle)",
+                      color: subTaskId ? "var(--text-primary)" : "var(--text-muted)",
+                    }}
+                    title="Select sub-task for this day"
+                  >
+                    <option value="">-- Sub-task --</option>
+                    {subTasks.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        {st.title}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
           );

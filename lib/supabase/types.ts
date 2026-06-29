@@ -135,6 +135,7 @@ export type Database = {
           id: string
           is_template: boolean
           name: string
+          on_calendar: boolean | null
           start_date: string | null
           status: string
           updated_at: string | null
@@ -149,6 +150,7 @@ export type Database = {
           id?: string
           is_template?: boolean
           name: string
+          on_calendar?: boolean | null
           start_date?: string | null
           status?: string
           updated_at?: string | null
@@ -163,6 +165,7 @@ export type Database = {
           id?: string
           is_template?: boolean
           name?: string
+          on_calendar?: boolean | null
           start_date?: string | null
           status?: string
           updated_at?: string | null
@@ -191,6 +194,7 @@ export type Database = {
           created_by: string | null
           id: string
           is_completed: boolean | null
+          on_calendar: boolean | null
           scheduled_date: string | null
           sort_order: number | null
           task_id: string
@@ -202,6 +206,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_completed?: boolean | null
+          on_calendar?: boolean | null
           scheduled_date?: string | null
           sort_order?: number | null
           task_id: string
@@ -213,6 +218,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_completed?: boolean | null
+          on_calendar?: boolean | null
           scheduled_date?: string | null
           sort_order?: number | null
           task_id?: string
@@ -260,6 +266,7 @@ export type Database = {
           precursor_task_id: string | null
           priority: string
           project_id: string | null
+          on_calendar: boolean | null
           scheduled_date: string | null
           scheduled_end_date: string | null
           scheduled_time: string | null
@@ -282,6 +289,7 @@ export type Database = {
           is_flagged?: boolean | null
           is_template?: boolean
           job_number?: string | null
+          on_calendar?: boolean | null
           precursor_task_id?: string | null
           priority?: string
           project_id?: string | null
@@ -307,6 +315,7 @@ export type Database = {
           is_flagged?: boolean | null
           is_template?: boolean
           job_number?: string | null
+          on_calendar?: boolean | null
           precursor_task_id?: string | null
           priority?: string
           project_id?: string | null
