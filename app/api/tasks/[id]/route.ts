@@ -41,7 +41,7 @@ export async function PATCH(
       project:projects(id, name, color, status),
       assigned_user:users!tasks_assigned_to_fkey(id, full_name, email),
       sub_tasks(id, title, is_completed, sort_order),
-      precursor:tasks!tasks_precursor_task_id_fkey(id, task_name)
+      precursor:tasks!precursor_task_id(id, task_name)
     `)
     .single();
 
@@ -73,7 +73,7 @@ export async function PATCH(
       project:projects(id, name, color, status),
       assigned_user:users!tasks_assigned_to_fkey(id, full_name, email),
       sub_tasks(id, title, is_completed, sort_order),
-      precursor:tasks!tasks_precursor_task_id_fkey(id, task_name)
+      precursor:tasks!precursor_task_id(id, task_name)
     `)
     .eq("id", id)
     .single();
@@ -122,7 +122,7 @@ export async function GET(
       project:projects(id, name, color, status),
       assigned_user:users!tasks_assigned_to_fkey(id, full_name, email),
       sub_tasks(id, title, is_completed, sort_order),
-      precursor:tasks!tasks_precursor_task_id_fkey(id, task_name)
+      precursor:tasks!precursor_task_id(id, task_name)
     `)
     .eq("id", id)
     .single();
