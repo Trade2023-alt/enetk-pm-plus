@@ -25,10 +25,11 @@ export async function PATCH(
   }
 
   const body = await req.json();
+  const { clone_from_project_id, clone_tasks, ...updateData } = body;
 
   const { data, error } = await supabase
     .from("projects")
-    .update(body as any)
+    .update(updateData as any)
     .eq("id", id)
     .select("*, customer:customers(id, name)")
     .single();
