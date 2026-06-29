@@ -40,7 +40,7 @@ export async function PATCH(
       *,
       project:projects(id, name, color, status),
       assigned_user:users!tasks_assigned_to_fkey(id, full_name, email),
-      sub_tasks(id, title, is_completed, sort_order),
+      sub_tasks(*),
       precursor:tasks!precursor_task_id(id, task_name)
     `)
     .single();
@@ -60,6 +60,7 @@ export async function PATCH(
         is_completed: Boolean((st as any).is_completed),
         sort_order:   Number((st as any).sort_order ?? idx),
         scheduled_date: st.scheduled_date || null,
+        assigned_to:  st.assigned_to || null,
         created_by:   userId,
       }));
       await supabase.from("sub_tasks").insert(stInserts as SubTaskInsert[]);
@@ -73,7 +74,7 @@ export async function PATCH(
       *,
       project:projects(id, name, color, status),
       assigned_user:users!tasks_assigned_to_fkey(id, full_name, email),
-      sub_tasks(id, title, is_completed, sort_order),
+      sub_tasks(*),
       precursor:tasks!precursor_task_id(id, task_name)
     `)
     .eq("id", id)
@@ -122,7 +123,7 @@ export async function GET(
       *,
       project:projects(id, name, color, status),
       assigned_user:users!tasks_assigned_to_fkey(id, full_name, email),
-      sub_tasks(id, title, is_completed, sort_order),
+      sub_tasks(*),
       precursor:tasks!precursor_task_id(id, task_name)
     `)
     .eq("id", id)

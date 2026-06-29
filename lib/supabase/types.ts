@@ -186,6 +186,7 @@ export type Database = {
       }
       sub_tasks: {
         Row: {
+          assigned_to: string | null
           created_at: string | null
           created_by: string | null
           id: string
@@ -196,6 +197,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          assigned_to?: string | null
           created_at?: string | null
           created_by?: string | null
           id?: string
@@ -206,6 +208,7 @@ export type Database = {
           title: string
         }
         Update: {
+          assigned_to?: string | null
           created_at?: string | null
           created_by?: string | null
           id?: string
@@ -216,6 +219,13 @@ export type Database = {
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "sub_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sub_tasks_created_by_fkey"
             columns: ["created_by"]

@@ -4,15 +4,21 @@ import { createServerClient } from "@/lib/supabase/server";
 
 // GET /api/users — user list for admin and team members
 export async function GET(req: NextRequest) {
-  const { userId, sessionClaims } = await auth();
+  const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const role = (sessionClaims?.metadata as any)?.role;
-  if (role !== "admin" && role !== "user") {
+  const supabase = createServerClient();
+
+  // Fetch logged-in user profile from Supabase database to check role
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", userId)
+    .single();
+
+  if (!userProfile || (userProfile.role !== "admin" && userProfile.role !== "user")) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
-
-  const supabase = createServerClient();
 
   // Proactive sync: Fetch users from Clerk and sync any missing users to Supabase database
   try {

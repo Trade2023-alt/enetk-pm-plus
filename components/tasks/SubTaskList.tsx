@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Plus, Trash2, CheckSquare, Square, Calendar } from "lucide-react";
+import { Plus, Trash2, CheckSquare, Square, Calendar, Users } from "lucide-react";
 import type { SubTask } from "@/lib/supabase/types";
 
 interface SubTaskListProps {
@@ -9,9 +9,10 @@ interface SubTaskListProps {
   onChange: (subTasks: Partial<SubTask & { scheduled_date?: string }>[]) => void;
   showDates?: boolean; // show date picker per sub-task
   disabled?: boolean;
+  usersList?: any[];
 }
 
-export default function SubTaskList({ subTasks, onChange, showDates = true, disabled = false }: SubTaskListProps) {
+export default function SubTaskList({ subTasks, onChange, showDates = true, disabled = false, usersList }: SubTaskListProps) {
   const [newTitle, setNewTitle] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -47,6 +48,11 @@ export default function SubTaskList({ subTasks, onChange, showDates = true, disa
   const updateDate = (idx: number, date: string) => {
     if (disabled) return;
     onChange(subTasks.map((s, i) => i === idx ? { ...s, scheduled_date: date || undefined } : s));
+  };
+
+  const updateAssignedTo = (idx: number, userId: string | null) => {
+    if (disabled) return;
+    onChange(subTasks.map((s, i) => i === idx ? { ...s, assigned_to: userId } : s));
   };
 
   return (
@@ -126,6 +132,35 @@ export default function SubTaskList({ subTasks, onChange, showDates = true, disa
                   }}
                   title={st.scheduled_date ? `Scheduled: ${st.scheduled_date}` : "Set date"}
                 />
+              </div>
+            )}
+
+            {/* User assignment dropdown */}
+            {usersList && usersList.length > 0 && (
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {!st.assigned_to && (
+                  <Users size={10} style={{ color: "var(--text-muted)" }} />
+                )}
+                <select
+                  value={st.assigned_to ?? ""}
+                  disabled={disabled}
+                  onChange={(e) => updateAssignedTo(idx, e.target.value || null)}
+                  className="text-[10px] rounded border px-1 py-0.5 outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
+                  style={{
+                    background: "var(--bg-elevated)",
+                    borderColor: st.assigned_to ? "var(--maroon)" : "var(--border-subtle)",
+                    color: st.assigned_to ? "var(--text-primary)" : "var(--text-muted)",
+                    width: st.assigned_to ? "88px" : "30px",
+                  }}
+                  title={st.assigned_to ? "Assigned user" : "Assign user"}
+                >
+                  <option value="">{st.assigned_to ? "Unassigned" : ""}</option>
+                  {usersList.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.full_name ?? u.email.split("@")[0]}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
 

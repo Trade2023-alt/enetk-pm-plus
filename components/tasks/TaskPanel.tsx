@@ -492,6 +492,7 @@ export default function TaskPanel() {
               onChange={setSubTasks}
               showDates={true}
               disabled={isReadOnly}
+              usersList={usersList}
             />
           </Section>
 

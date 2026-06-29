@@ -7,18 +7,24 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { userId: currentUserId, sessionClaims } = await auth();
+  const { userId: currentUserId } = await auth();
   if (!currentUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const currentRole = (sessionClaims?.metadata as any)?.role;
-  if (currentRole !== "admin") {
+  const supabase = createServerClient();
+
+  // Fetch logged-in user profile from Supabase database to check role
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", currentUserId)
+    .single();
+
+  if (!userProfile || userProfile.role !== "admin") {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
   const { id } = await params;
   const body = await req.json();
-
-  const supabase = createServerClient();
 
   // 1. Update public.users in Supabase
   const updateData: any = {};
