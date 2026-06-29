@@ -32,6 +32,7 @@ interface ProjectModalProps {
     description: string | null;
     color: string;
     status: string;
+    customer_id?: string | null;
   } | null;
   onSaved: () => void;
 }
@@ -50,9 +51,23 @@ export default function ProjectModal({
   const [description, setDescription] = useState("");
   const [color, setColor]             = useState(COLOR_SWATCHES[0].hex);
   const [status, setStatus]           = useState<"active" | "on_hold" | "completed" | "archived">("active");
+  const [customerId, setCustomerId]   = useState("");
+  const [customers, setCustomers]     = useState<any[]>([]);
   const [saving, setSaving]           = useState(false);
   const [deleting, setDeleting]       = useState(false);
   const [error, setError]             = useState<string | null>(null);
+
+  // Fetch customers list
+  useEffect(() => {
+    if (open) {
+      fetch("/api/customers")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.customers) setCustomers(data.customers);
+        })
+        .catch(console.error);
+    }
+  }, [open]);
 
   // Populate when editing
   useEffect(() => {
@@ -62,11 +77,13 @@ export default function ProjectModal({
       setDescription(editProject.description ?? "");
       setColor(editProject.color ?? COLOR_SWATCHES[0].hex);
       setStatus(editProject.status as any);
+      setCustomerId(editProject.customer_id ?? "");
     } else {
       setName("");
       setDescription("");
       setColor(COLOR_SWATCHES[0].hex);
       setStatus("active");
+      setCustomerId("");
     }
     setError(null);
   }, [open, editProject]);
@@ -89,7 +106,13 @@ export default function ProjectModal({
     setError(null);
 
     try {
-      const payload = { name: name.trim(), description: description || null, color, status };
+      const payload = {
+        name: name.trim(),
+        description: description || null,
+        color,
+        status,
+        customer_id: customerId || null
+      };
 
       if (editProject) {
         const res = await fetch(`/api/projects/${editProject.id}`, {
@@ -245,6 +268,30 @@ export default function ProjectModal({
                 onFocus={(e) => (e.target.style.borderColor = "var(--maroon)")}
                 onBlur={(e) => (e.target.style.borderColor = "var(--border-subtle)")}
               />
+            </div>
+
+            {/* Customer Link */}
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>
+                Customer Link
+              </label>
+              <select
+                value={customerId}
+                onChange={(e) => setCustomerId(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border text-sm outline-none transition-all cursor-pointer"
+                style={{
+                  background: "var(--bg-surface)",
+                  borderColor: "var(--border-subtle)",
+                  color: "var(--text-primary)",
+                }}
+                onFocus={(e) => (e.target.style.borderColor = "var(--maroon)")}
+                onBlur={(e) => (e.target.style.borderColor = "var(--border-subtle)")}
+              >
+                <option value="">-- No Customer Link --</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
             </div>
 
             {/* Description */}
