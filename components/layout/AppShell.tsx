@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { useAppStore } from "@/lib/store/useAppStore";
 import NavRail from "@/components/layout/NavRail";
 import BacklogSidebar from "@/components/layout/BacklogSidebar";
@@ -10,7 +11,8 @@ interface AppShellProps {
 }
 
 export default function AppShell({ children }: AppShellProps) {
-  const { backlogSidebarOpen, navRailExpanded } = useAppStore();
+  const { navRailExpanded } = useAppStore();
+  const pathname = usePathname();
 
   // Apply body overflow lock when modal is open (handled globally)
   useEffect(() => {
@@ -37,8 +39,8 @@ export default function AppShell({ children }: AppShellProps) {
         {children}
       </main>
 
-      {/* ── Right Backlog Sidebar Dock ── */}
-      <BacklogSidebar />
+      {/* ── Right Backlog Sidebar Dock (Dashboard only) ── */}
+      {pathname === "/dashboard" && <BacklogSidebar />}
     </div>
   );
 }
