@@ -3,6 +3,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Custom Position Utility Overrides (Bypass Tailwind v4 compile bugs) ── */
+.left-0 { left: 0px !important; }
+.right-0 { right: 0px !important; }
+.top-0 { top: 0px !important; }
+.bottom-0 { bottom: 0px !important; }
+.-left-3\.5 { left: -0.875rem !important; }
+.-top-1 { top: -0.25rem !important; }
+.-right-1 { right: -0.25rem !important; }
+
 /* ── CSS Design Tokens ───────────────────────────────────────────────────── */
 :root {
   /* Backgrounds */
