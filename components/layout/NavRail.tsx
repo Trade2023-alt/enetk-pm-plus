@@ -49,6 +49,7 @@ export default function NavRail() {
   // ── Task Explorer States & Data ──
   const [localCustomers, setLocalCustomers] = useState<any[]>([]);
   const [expandedCustomers, setExpandedCustomers] = useState<Record<string, boolean>>({});
+  const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
   const externalEventsRef = useRef<HTMLDivElement>(null);
 
@@ -64,34 +65,102 @@ export default function NavRail() {
     }
   }, [expanded]);
 
-  // Group tasks by customer
+  // Group tasks by customer > project
   const groupedData = useMemo(() => {
-    const groups: Record<string, { customerName: string; tasks: TaskWithRelations[] }> = {};
+    const groups: Record<string, {
+      customerName: string;
+      projects: Record<string, {
+        projectName: string;
+        projectColor?: string;
+        tasks: TaskWithRelations[];
+      }>;
+    }> = {};
 
     // Standalone group
-    groups["unassigned"] = { customerName: "Standalone / General Tasks", tasks: [] };
+    groups["unassigned"] = {
+      customerName: "Standalone / General Tasks",
+      projects: {
+        "unassigned-proj": {
+          projectName: "General Tasks",
+          projectColor: "var(--maroon)",
+          tasks: []
+        }
+      }
+    };
 
-    // Initialize groups for fetched customers
+    // Initialize customer groups
     localCustomers.forEach((c) => {
-      groups[c.id] = { customerName: c.name, tasks: [] };
+      groups[c.id] = { customerName: c.name, projects: {} };
     });
 
-    tasks.forEach((task) => {
-      const proj = projects.find((p) => p.id === task.project_id);
-      const custId = proj?.customer_id;
-
+    // Initialize project groups under customers
+    projects.forEach((proj) => {
+      const custId = proj.customer_id;
       if (custId && groups[custId]) {
-        groups[custId].tasks.push(task);
+        groups[custId].projects[proj.id] = {
+          projectName: proj.name,
+          projectColor: proj.color ?? undefined,
+          tasks: []
+        };
       } else {
-        groups["unassigned"].tasks.push(task);
+        // Project has no customer, or customer not found: put it in Standalone
+        groups["unassigned"].projects[proj.id] = {
+          projectName: proj.name,
+          projectColor: proj.color ?? undefined,
+          tasks: []
+        };
       }
     });
 
-    // Remove empty groups (except unassigned if it has tasks)
-    const result: Record<string, { customerName: string; tasks: TaskWithRelations[] }> = {};
-    Object.keys(groups).forEach((key) => {
-      if (groups[key].tasks.length > 0) {
-        result[key] = groups[key];
+    // Assign tasks to project groups
+    tasks.forEach((task) => {
+      const projId = task.project_id;
+      if (projId) {
+        const proj = projects.find((p) => p.id === projId);
+        const custId = proj?.customer_id;
+
+        if (custId && groups[custId] && groups[custId].projects[projId]) {
+          groups[custId].projects[projId].tasks.push(task);
+        } else if (groups["unassigned"].projects[projId]) {
+          groups["unassigned"].projects[projId].tasks.push(task);
+        } else {
+          groups["unassigned"].projects["unassigned-proj"].tasks.push(task);
+        }
+      } else {
+        groups["unassigned"].projects["unassigned-proj"].tasks.push(task);
+      }
+    });
+
+    // Filter out empty customers and empty projects
+    const result: Record<string, {
+      customerName: string;
+      projects: Record<string, {
+        projectName: string;
+        projectColor?: string;
+        tasks: TaskWithRelations[];
+      }>;
+    }> = {};
+
+    Object.keys(groups).forEach((custId) => {
+      const custGroup = groups[custId];
+      const filteredProjects: Record<string, {
+        projectName: string;
+        projectColor?: string;
+        tasks: TaskWithRelations[];
+      }> = {};
+
+      Object.keys(custGroup.projects).forEach((projId) => {
+        const projGroup = custGroup.projects[projId];
+        if (projGroup.tasks.length > 0) {
+          filteredProjects[projId] = projGroup;
+        }
+      });
+
+      if (Object.keys(filteredProjects).length > 0) {
+        result[custId] = {
+          customerName: custGroup.customerName,
+          projects: filteredProjects
+        };
       }
     });
 
@@ -298,115 +367,158 @@ export default function NavRail() {
                         {group.customerName}
                       </span>
                       <span className="text-[9px] px-1 rounded-full bg-[var(--border-subtle)] text-[var(--text-muted)] group-hover:bg-[var(--maroon-subtle)] group-hover:text-[var(--maroon-light)] transition-colors">
-                        {group.tasks.length}
+                        {Object.values(group.projects).reduce((sum, p) => sum + p.tasks.length, 0)}
                       </span>
                     </button>
 
-                    {/* Tasks List */}
+                    {/* Projects & Tasks List */}
                     {isCustExpanded && (
-                      <div className="pl-3 border-l ml-2.5 space-y-1.5 py-1" style={{ borderColor: "var(--border-subtle)" }}>
-                        {group.tasks.map((task) => {
-                          const isTaskExpanded = expandedTasks[task.id] ?? false;
-                          const toggleTask = (e: React.MouseEvent) => {
+                      <div className="pl-2 border-l ml-2 space-y-2 py-1" style={{ borderColor: "var(--border-subtle)" }}>
+                        {Object.entries(group.projects).map(([projId, projGroup]) => {
+                          const isProjExpanded = expandedProjects[projId] ?? false;
+                          const toggleProj = (e: React.MouseEvent) => {
                             e.stopPropagation();
-                            setExpandedTasks(prev => ({ ...prev, [task.id]: !prev[task.id] }));
+                            setExpandedProjects(prev => ({ ...prev, [projId]: !prev[projId] }));
                           };
-
-                          const projectColor = projects.find(p => p.id === task.project_id)?.color ?? "hsl(215,25%,38%)";
-                          const taskColor = task.is_flagged
-                            ? "hsl(38,80%,40%)"
-                            : task.color_override ?? projectColor;
-
-                          const hasSubtasks = (task.sub_tasks ?? []).length > 0;
+                          const totalProjTasks = projGroup.tasks.length;
 
                           return (
-                            <div key={task.id} className="space-y-1">
-                              {/* Task Row */}
-                              <div
-                                {...(userRole !== "customer" ? {
-                                  "data-fc-draggable": "true",
-                                  "data-task-id": task.id,
-                                  "data-task-name": task.task_name,
-                                  "data-duration": task.duration_hours ?? 1,
-                                  "data-color": taskColor,
-                                } : {})}
-                                onClick={() => openEditPanel(task)}
-                                className="flex items-center gap-1 py-1 px-1.5 rounded border border-transparent hover:border-[var(--border-subtle)] hover:bg-[var(--bg-hover)] transition-all cursor-grab active:cursor-grabbing group select-none"
-                                style={{
-                                  borderLeft: `2.5px solid ${taskColor}`
-                                }}
+                            <div key={projId} className="space-y-1">
+                              {/* Project Row */}
+                              <button
+                                onClick={toggleProj}
+                                className="flex items-center gap-1.5 w-full text-left py-0.5 px-1 rounded hover:bg-[var(--bg-hover)] transition-colors group/proj"
                               >
-                                {userRole !== "customer" && (
-                                  <GripVertical
-                                    size={10}
-                                    className="text-muted opacity-25 group-hover:opacity-100 transition-opacity cursor-grab flex-shrink-0"
-                                  />
-                                )}
-                                {hasSubtasks ? (
-                                  <button
-                                    onClick={toggleTask}
-                                    className="p-0.5 rounded hover:bg-[var(--bg-elevated)] transition-colors flex-shrink-0"
-                                  >
-                                    <ChevronRight
-                                      size={10}
-                                      className="transition-transform duration-200"
-                                      style={{
-                                        color: "var(--text-muted)",
-                                        transform: isTaskExpanded ? "rotate(90deg)" : "rotate(0deg)"
-                                      }}
-                                    />
-                                  </button>
-                                ) : (
-                                  <span className="w-3.5 flex-shrink-0" />
-                                )}
-                                <span className="text-xs truncate flex-1 font-medium" style={{ color: "var(--text-primary)" }}>
-                                  {task.task_name}
+                                <ChevronRight
+                                  size={11}
+                                  className="transition-transform duration-200 flex-shrink-0"
+                                  style={{
+                                    color: "var(--text-muted)",
+                                    transform: isProjExpanded ? "rotate(90deg)" : "rotate(0deg)"
+                                  }}
+                                />
+                                <div
+                                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                  style={{ background: projGroup.projectColor ?? "var(--maroon)" }}
+                                />
+                                <span className="text-[11px] font-semibold truncate flex-1" style={{ color: "var(--text-secondary)" }}>
+                                  {projGroup.projectName}
                                 </span>
-                              </div>
+                                <span className="text-[8px] px-1.5 rounded-full bg-[var(--border-subtle)] text-[var(--text-muted)]">
+                                  {totalProjTasks}
+                                </span>
+                              </button>
 
-                              {/* Sub-tasks list */}
-                              {isTaskExpanded && hasSubtasks && (
-                                <div className="pl-4 space-y-1 py-0.5">
-                                  {(task.sub_tasks ?? []).map((st: any) => (
-                                    <div
-                                      key={st.id ?? Math.random()}
-                                      className="flex items-center gap-1.5 py-0.5 group/sub cursor-grab active:cursor-grabbing border border-transparent hover:border-[var(--border-subtle)] hover:bg-[var(--bg-hover)] rounded px-1 transition-all select-none"
-                                      {...(userRole !== "customer" && !st.is_completed ? {
-                                        "data-fc-draggable": "true",
-                                        "data-task-id": task.id,
-                                        "data-subtask-id": st.id,
-                                        "data-subtask-title": st.title,
-                                        "data-color": taskColor,
-                                      } : {})}
-                                    >
-                                      {userRole !== "customer" && !st.is_completed && (
-                                        <GripVertical
-                                          size={9}
-                                          className="text-muted opacity-20 group-hover/sub:opacity-100 transition-opacity cursor-grab flex-shrink-0"
-                                        />
-                                      )}
-                                      <button
-                                        disabled={userRole === "customer"}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleToggleSubTask(task, st.id, st.is_completed);
-                                        }}
-                                        className="transition-colors disabled:cursor-not-allowed flex-shrink-0"
-                                        style={{ color: st.is_completed ? "var(--status-ok)" : "var(--text-muted)" }}
-                                      >
-                                        {st.is_completed ? <CheckSquare size={11} /> : <Square size={11} />}
-                                      </button>
-                                      <span
-                                        className="text-[11px] truncate flex-1 transition-colors"
-                                        style={{
-                                          color: st.is_completed ? "var(--text-muted)" : "var(--text-secondary)",
-                                          textDecoration: st.is_completed ? "line-through" : "none"
-                                        }}
-                                      >
-                                        {st.title}
-                                      </span>
-                                    </div>
-                                  ))}
+                              {/* Tasks List */}
+                              {isProjExpanded && (
+                                <div className="pl-2.5 border-l ml-1.5 space-y-1.5 py-0.5" style={{ borderColor: "var(--border-subtle)" }}>
+                                  {projGroup.tasks.map((task) => {
+                                    const isTaskExpanded = expandedTasks[task.id] ?? false;
+                                    const toggleTask = (e: React.MouseEvent) => {
+                                      e.stopPropagation();
+                                      setExpandedTasks(prev => ({ ...prev, [task.id]: !prev[task.id] }));
+                                    };
+
+                                    const projectColor = projects.find(p => p.id === task.project_id)?.color ?? "hsl(215,25%,38%)";
+                                    const taskColor = task.is_flagged
+                                      ? "hsl(38,80%,40%)"
+                                      : task.color_override ?? projectColor;
+
+                                    const hasSubtasks = (task.sub_tasks ?? []).length > 0;
+
+                                    return (
+                                      <div key={task.id} className="space-y-1">
+                                        {/* Task Row */}
+                                        <div
+                                          {...(userRole !== "customer" ? {
+                                            "data-fc-draggable": "true",
+                                            "data-task-id": task.id,
+                                            "data-task-name": task.task_name,
+                                            "data-duration": task.duration_hours ?? 1,
+                                            "data-color": taskColor,
+                                          } : {})}
+                                          onClick={() => openEditPanel(task)}
+                                          className="flex items-center gap-1 py-1 px-1.5 rounded border border-transparent hover:border-[var(--border-subtle)] hover:bg-[var(--bg-hover)] transition-all cursor-grab active:cursor-grabbing group select-none"
+                                          style={{
+                                            borderLeft: `2.5px solid ${taskColor}`
+                                          }}
+                                        >
+                                          {userRole !== "customer" && (
+                                            <GripVertical
+                                              size={10}
+                                              className="text-muted opacity-25 group-hover:opacity-100 transition-opacity cursor-grab flex-shrink-0"
+                                            />
+                                          )}
+                                          {hasSubtasks ? (
+                                            <button
+                                              onClick={toggleTask}
+                                              className="p-0.5 rounded hover:bg-[var(--bg-elevated)] transition-colors flex-shrink-0"
+                                            >
+                                              <ChevronRight
+                                                size={10}
+                                                className="transition-transform duration-200"
+                                                style={{
+                                                  color: "var(--text-muted)",
+                                                  transform: isTaskExpanded ? "rotate(90deg)" : "rotate(0deg)"
+                                                }}
+                                              />
+                                            </button>
+                                          ) : (
+                                            <span className="w-3.5 flex-shrink-0" />
+                                          )}
+                                          <span className="text-xs truncate flex-1 font-medium" style={{ color: "var(--text-primary)" }}>
+                                            {task.task_name}
+                                          </span>
+                                        </div>
+
+                                        {/* Sub-tasks list */}
+                                        {isTaskExpanded && hasSubtasks && (
+                                          <div className="pl-4 space-y-1 py-0.5">
+                                            {(task.sub_tasks ?? []).map((st: any) => (
+                                              <div
+                                                key={st.id ?? Math.random()}
+                                                className="flex items-center gap-1.5 py-0.5 group/sub cursor-grab active:cursor-grabbing border border-transparent hover:border-[var(--border-subtle)] hover:bg-[var(--bg-hover)] rounded px-1 transition-all select-none"
+                                                {...(userRole !== "customer" && !st.is_completed ? {
+                                                  "data-fc-draggable": "true",
+                                                  "data-task-id": task.id,
+                                                  "data-subtask-id": st.id,
+                                                  "data-subtask-title": st.title,
+                                                  "data-color": taskColor,
+                                                } : {})}
+                                              >
+                                                {userRole !== "customer" && !st.is_completed && (
+                                                  <GripVertical
+                                                    size={9}
+                                                    className="text-muted opacity-20 group-hover/sub:opacity-100 transition-opacity cursor-grab flex-shrink-0"
+                                                  />
+                                                )}
+                                                <button
+                                                  disabled={userRole === "customer"}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleToggleSubTask(task, st.id, st.is_completed);
+                                                  }}
+                                                  className="transition-colors disabled:cursor-not-allowed flex-shrink-0"
+                                                  style={{ color: st.is_completed ? "var(--status-ok)" : "var(--text-muted)" }}
+                                                >
+                                                  {st.is_completed ? <CheckSquare size={11} /> : <Square size={11} />}
+                                                </button>
+                                                <span
+                                                  className="text-[11px] truncate flex-1 transition-colors"
+                                                  style={{
+                                                    color: st.is_completed ? "var(--text-muted)" : "var(--text-secondary)",
+                                                    textDecoration: st.is_completed ? "line-through" : "none"
+                                                  }}
+                                                >
+                                                  {st.title}
+                                                </span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               )}
                             </div>
