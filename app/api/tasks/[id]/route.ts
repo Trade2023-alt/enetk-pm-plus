@@ -59,6 +59,7 @@ export async function PATCH(
         title:        st.title,
         is_completed: Boolean((st as any).is_completed),
         sort_order:   Number((st as any).sort_order ?? idx),
+        scheduled_date: st.scheduled_date || null,
         created_by:   userId,
       }));
       await supabase.from("sub_tasks").insert(stInserts as SubTaskInsert[]);

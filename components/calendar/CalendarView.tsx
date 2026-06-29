@@ -13,20 +13,32 @@ import { getTaskColor } from "@/lib/utils/taskUtils";
 import CalendarEventCard from "./CalendarEventCard";
 import { format, addDays } from "date-fns";
 
-export default function CalendarView() {
-  const calendarRef = useRef<FullCalendar>(null);
+interface CalendarViewProps {
+  calendarRef: React.RefObject<FullCalendar | null>;
+}
+
+export default function CalendarView({ calendarRef }: CalendarViewProps) {
 
   const {
     calendarView,
     tasks,
     projects,
     updateTask,
+    updateProject,
     openCreatePanel,
     openEditPanel,
     taskPanelOpen,
     backlogSidebarOpen,
     navRailExpanded,
+    setCalendarApi,
   } = useAppStore();
+
+  useEffect(() => {
+    if (calendarRef.current) {
+      setCalendarApi(calendarRef.current.getApi());
+    }
+    return () => setCalendarApi(null);
+  }, [calendarRef, setCalendarApi]);
 
   // ── Build main task events ──────────────────────────────────────────────
   const taskEvents = useMemo(() =>
@@ -53,7 +65,7 @@ export default function CalendarView() {
           textColor:       "#E1E4EB",
           editable:        true,
           durationEditable: true,   // ← enable right-edge resize
-          extendedProps:   { task, project, isFlagged: task.is_flagged },
+          extendedProps:   { task, project, isTask: true },
         };
       }),
     [tasks, projects]
@@ -72,32 +84,109 @@ export default function CalendarView() {
           title:           `· ${st.title}`,
           start:           st.scheduled_date,
           allDay:          true,
-          backgroundColor: color + "55",
+          backgroundColor: color + "33",
           borderColor:     color,
           textColor:       "#C8CDD8",
-          editable:        false,
+          editable:        true, // sub-tasks are draggable!
           classNames:      ["fc-subtask-dot"],
-          extendedProps:   { task, isSubTask: true },
+          extendedProps:   { task, isSubTask: true, subTaskId: st.id, taskId: task.id },
         });
       });
     });
     return dots;
   }, [tasks, projects]);
 
-  const calendarEvents = useMemo(() => [...taskEvents, ...subTaskEvents], [taskEvents, subTaskEvents]);
+  // ── Project banner events ───────────────────────────────────────────────
+  const projectEvents = useMemo(() =>
+    projects
+      .filter((p) => p.start_date && p.status !== "completed" && p.status !== "archived")
+      .map((proj) => {
+        const endStr = proj.end_date
+          ? format(addDays(new Date(proj.end_date), 1), "yyyy-MM-dd")
+          : undefined;
+
+        return {
+          id:              `proj-${proj.id}`,
+          title:           `📁 PROJECT: ${proj.name}`,
+          start:           proj.start_date!,
+          end:             endStr,
+          allDay:          true,
+          backgroundColor: proj.color ?? "var(--maroon)",
+          borderColor:     "transparent",
+          textColor:       "#FFFFFF",
+          editable:        true,
+          durationEditable: true,
+          classNames:      ["fc-project-banner"],
+          extendedProps:   { project: proj, isProject: true },
+        };
+      })
+  , [projects]);
+
+  const calendarEvents = useMemo(() => [...taskEvents, ...subTaskEvents, ...projectEvents], [taskEvents, subTaskEvents, projectEvents]);
 
   // ── Drop: move existing event ───────────────────────────────────────────
   const handleEventDrop = useCallback(
     async (info: EventDropArg) => {
-      if (info.event.extendedProps?.isSubTask) { info.revert(); return; }
       const { event, revert } = info;
-      const taskId  = event.id;
+      const isSubTask = event.extendedProps?.isSubTask || event.id.startsWith("st-");
+      const isProject = event.extendedProps?.isProject || event.id.startsWith("proj-");
       const newDate = format(event.start!, "yyyy-MM-dd");
-      // Recalculate end date preserving span length
       const endDate = event.end
         ? format(addDays(event.end, -1), "yyyy-MM-dd")
         : null;
 
+      if (isSubTask) {
+        const subTaskId = event.id.replace("st-", "");
+        const parentTaskId = event.extendedProps?.taskId;
+        if (parentTaskId) {
+          const task = tasks.find(t => t.id === parentTaskId);
+          if (task) {
+            const updatedSubTasks = (task.sub_tasks ?? []).map((st: any) =>
+              st.id === subTaskId ? { ...st, scheduled_date: newDate } : st
+            );
+            updateTask(parentTaskId, { sub_tasks: updatedSubTasks } as any);
+          }
+        }
+        try {
+          const res = await fetch(`/api/sub-tasks/${subTaskId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ scheduled_date: newDate }),
+          });
+          if (!res.ok) throw new Error();
+        } catch {
+          revert();
+          if (parentTaskId) {
+            const task = tasks.find(t => t.id === parentTaskId);
+            if (task) {
+              const updatedSubTasks = (task.sub_tasks ?? []).map((st: any) =>
+                st.id === subTaskId ? { ...st, scheduled_date: info.oldEvent.startStr.split("T")[0] } : st
+              );
+              updateTask(parentTaskId, { sub_tasks: updatedSubTasks } as any);
+            }
+          }
+        }
+        return;
+      }
+
+      if (isProject) {
+        const projectId = event.id.replace("proj-", "");
+        updateProject(projectId, { start_date: newDate, end_date: endDate });
+        try {
+          const res = await fetch(`/api/projects/${projectId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ start_date: newDate, end_date: endDate }),
+          });
+          if (!res.ok) throw new Error();
+        } catch {
+          revert();
+        }
+        return;
+      }
+
+      // Default: Task
+      const taskId  = event.id;
       updateTask(taskId, { scheduled_date: newDate, scheduled_end_date: endDate } as any);
       try {
         const res = await fetch(`/api/tasks/${taskId}`, {
@@ -111,20 +200,37 @@ export default function CalendarView() {
         updateTask(taskId, { scheduled_date: info.oldEvent.startStr.split("T")[0] } as any);
       }
     },
-    [updateTask]
+    [updateTask, updateProject, tasks]
   );
 
   // ── Resize: stretch event across days ──────────────────────────────────
   const handleEventResize = useCallback(
     async (info: EventResizeDoneArg) => {
       const { event, revert } = info;
-      const taskId    = event.id;
+      const isProject = event.extendedProps?.isProject || event.id.startsWith("proj-");
       const startDate = format(event.start!, "yyyy-MM-dd");
-      // FC end is exclusive for all-day → subtract 1
       const endDate   = event.end
         ? format(addDays(event.end, -1), "yyyy-MM-dd")
         : startDate;
 
+      if (isProject) {
+        const projectId = event.id.replace("proj-", "");
+        updateProject(projectId, { start_date: startDate, end_date: endDate });
+        try {
+          const res = await fetch(`/api/projects/${projectId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ start_date: startDate, end_date: endDate }),
+          });
+          if (!res.ok) throw new Error();
+        } catch {
+          revert();
+        }
+        return;
+      }
+
+      // Default: Task
+      const taskId = event.id;
       updateTask(taskId, { scheduled_date: startDate, scheduled_end_date: endDate } as any);
       try {
         const res = await fetch(`/api/tasks/${taskId}`, {
@@ -137,15 +243,70 @@ export default function CalendarView() {
         revert();
       }
     },
-    [updateTask]
+    [updateTask, updateProject]
   );
 
   // ── External drop from backlog ──────────────────────────────────────────
   const handleEventReceive = useCallback(
     async (info: EventReceiveArg) => {
       const { event } = info;
-      const taskId  = event.extendedProps?.taskId ?? event.id;
+      const isSubTask = event.extendedProps?.isSubTask || event.id.startsWith("st-");
+      const isProject = event.extendedProps?.isProject || event.id.startsWith("proj-");
       const newDate = format(event.start!, "yyyy-MM-dd");
+
+      if (isSubTask) {
+        const subTaskId = event.extendedProps?.subTaskId || event.id.replace("st-", "");
+        const parentTaskId = event.extendedProps?.taskId;
+        event.remove();
+
+        if (parentTaskId) {
+          const task = tasks.find(t => t.id === parentTaskId);
+          if (task) {
+            const updatedSubTasks = (task.sub_tasks ?? []).map((st: any) =>
+              st.id === subTaskId ? { ...st, scheduled_date: newDate } : st
+            );
+            updateTask(parentTaskId, { sub_tasks: updatedSubTasks } as any);
+          }
+        }
+
+        try {
+          await fetch(`/api/sub-tasks/${subTaskId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ scheduled_date: newDate }),
+          });
+        } catch {
+          if (parentTaskId) {
+            const task = tasks.find(t => t.id === parentTaskId);
+            if (task) {
+              const updatedSubTasks = (task.sub_tasks ?? []).map((st: any) =>
+                st.id === subTaskId ? { ...st, scheduled_date: null } : st
+              );
+              updateTask(parentTaskId, { sub_tasks: updatedSubTasks } as any);
+            }
+          }
+        }
+        return;
+      }
+
+      if (isProject) {
+        const projectId = event.extendedProps?.projectId || event.id.replace("proj-", "");
+        event.remove();
+        updateProject(projectId, { start_date: newDate, end_date: newDate });
+        try {
+          await fetch(`/api/projects/${projectId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ start_date: newDate, end_date: newDate }),
+          });
+        } catch {
+          updateProject(projectId, { start_date: null, end_date: null });
+        }
+        return;
+      }
+
+      // Default: Task
+      const taskId  = event.extendedProps?.taskId ?? event.id;
       updateTask(taskId, { scheduled_date: newDate, scheduled_time: undefined });
       event.remove();
       try {
@@ -158,7 +319,7 @@ export default function CalendarView() {
         updateTask(taskId, { scheduled_date: null as any });
       }
     },
-    [updateTask]
+    [updateTask, updateProject, tasks]
   );
 
   // ── Click empty cell → open create panel ───────────────────────────────

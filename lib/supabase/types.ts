@@ -131,9 +131,11 @@ export type Database = {
           created_by: string | null
           customer_id: string | null
           description: string | null
+          end_date: string | null
           id: string
           is_template: boolean
           name: string
+          start_date: string | null
           status: string
           updated_at: string | null
         }
@@ -143,9 +145,11 @@ export type Database = {
           created_by?: string | null
           customer_id?: string | null
           description?: string | null
+          end_date?: string | null
           id?: string
           is_template?: boolean
           name: string
+          start_date?: string | null
           status?: string
           updated_at?: string | null
         }
@@ -155,9 +159,11 @@ export type Database = {
           created_by?: string | null
           customer_id?: string | null
           description?: string | null
+          end_date?: string | null
           id?: string
           is_template?: boolean
           name?: string
+          start_date?: string | null
           status?: string
           updated_at?: string | null
         }

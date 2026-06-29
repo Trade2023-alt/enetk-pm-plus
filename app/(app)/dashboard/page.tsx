@@ -12,7 +12,7 @@ import FullCalendar from "@fullcalendar/react";
 export default function DashboardPage() {
   const {
     setTasks, setProjects, tasks, projects,
-    backlogSidebarOpen, navRailExpanded, taskPanelOpen,
+    backlogSidebarOpen, navRailExpanded, taskPanelOpen, calendarApi
   } = useAppStore();
 
   const [loading,     setLoading]     = useState(true);
@@ -61,12 +61,11 @@ export default function DashboardPage() {
 
   // ── Calendar nav ──────────────────────────────────────────────────────────
   function handleNavigate(dir: "prev" | "next" | "today") {
-    const api = calendarRef.current?.getApi();
-    if (!api) return;
-    if (dir === "prev")  api.prev();
-    if (dir === "next")  api.next();
-    if (dir === "today") api.today();
-    setCurrentDate(api.getDate());
+    if (!calendarApi) return;
+    if (dir === "prev")  calendarApi.prev();
+    if (dir === "next")  calendarApi.next();
+    if (dir === "today") calendarApi.today();
+    setCurrentDate(calendarApi.getDate());
   }
 
   const sidebarW = backlogSidebarOpen ? "var(--sidebar-w)" : "var(--sidebar-w-sm)";
@@ -105,7 +104,7 @@ export default function DashboardPage() {
 
       {/* Calendar */}
       <div className="flex-1 overflow-hidden p-3">
-        <CalendarView />
+        <CalendarView calendarRef={calendarRef} />
       </div>
 
       {/* Slide-in task panel (replaces modal) */}

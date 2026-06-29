@@ -16,6 +16,9 @@ interface UIState {
 
   selectedProjectId: string | null;
   setSelectedProjectId: (id: string | null) => void;
+
+  calendarApi: any | null;
+  setCalendarApi: (api: any | null) => void;
 }
 
 // ── Drag State ────────────────────────────────────────────────────────────────
@@ -68,6 +71,7 @@ interface DataState {
   addTask: (task: TaskWithRelations) => void;
   removeTask: (id: string) => void;
   addProject: (project: Project) => void;
+  updateProject: (id: string, updates: Partial<Project>) => void;
 }
 
 // ── Combined Store ────────────────────────────────────────────────────────────
@@ -90,6 +94,8 @@ export const useAppStore = create<AppStore>()(
         set((s) => ({ navRailExpanded: !s.navRailExpanded })),
       setCalendarView: (view) => set({ calendarView: view }),
       setSelectedProjectId: (id) => set({ selectedProjectId: id }),
+      calendarApi: null,
+      setCalendarApi: (api) => set({ calendarApi: api }),
 
       // ── Drag ──
       draggingTask: null,
@@ -152,8 +158,13 @@ export const useAppStore = create<AppStore>()(
       addTask: (task) => set((s) => ({ tasks: [task, ...s.tasks] })),
       removeTask: (id) =>
         set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) })),
-      addProject: (project) =>
-        set((s) => ({ projects: [project, ...s.projects] })),
+      addProject: (project) => set((s) => ({ projects: [project, ...s.projects] })),
+      updateProject: (id, updates) =>
+        set((s) => ({
+          projects: s.projects.map((p) =>
+            p.id === id ? { ...p, ...updates } : p
+          ),
+        })),
     }),
     {
       name: "enetk-pm-ui-state",

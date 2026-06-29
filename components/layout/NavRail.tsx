@@ -16,6 +16,7 @@ import {
   Zap,
   CheckSquare,
   Square,
+  GripVertical,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store/useAppStore";
 import type { TaskWithRelations } from "@/lib/supabase/types";
@@ -106,11 +107,25 @@ export default function NavRail() {
         itemSelector: "[data-fc-draggable]",
         eventData: (eventEl: HTMLElement) => {
           const tId = eventEl.dataset.taskId ?? "";
+          const stId = eventEl.dataset.subtaskId ?? "";
           const foundTask = tasks.find(t => t.id === tId);
           const projectColor = projects.find(p => p.id === foundTask?.project_id)?.color ?? "hsl(215,25%,38%)";
           const taskColor = foundTask?.is_flagged
             ? "hsl(38,80%,40%)"
             : foundTask?.color_override ?? projectColor;
+
+          if (stId) {
+            return {
+              id: `st-${stId}`,
+              title: `· ${eventEl.dataset.subtaskTitle ?? "Sub-task"}`,
+              color: taskColor,
+              extendedProps: {
+                isSubTask: true,
+                subTaskId: stId,
+                taskId: tId,
+              },
+            };
+          }
 
           return {
             id:        tId,
@@ -316,15 +331,21 @@ export default function NavRail() {
                                   "data-color": taskColor,
                                 } : {})}
                                 onClick={() => openEditPanel(task)}
-                                className="flex items-center gap-1.5 py-1 px-1.5 rounded border border-transparent hover:border-[var(--border-subtle)] hover:bg-[var(--bg-hover)] transition-all cursor-grab active:cursor-grabbing group"
+                                className="flex items-center gap-1 py-1 px-1.5 rounded border border-transparent hover:border-[var(--border-subtle)] hover:bg-[var(--bg-hover)] transition-all cursor-grab active:cursor-grabbing group select-none"
                                 style={{
                                   borderLeft: `2.5px solid ${taskColor}`
                                 }}
                               >
+                                {userRole !== "customer" && (
+                                  <GripVertical
+                                    size={10}
+                                    className="text-muted opacity-25 group-hover:opacity-100 transition-opacity cursor-grab flex-shrink-0"
+                                  />
+                                )}
                                 {hasSubtasks ? (
                                   <button
                                     onClick={toggleTask}
-                                    className="p-0.5 rounded hover:bg-[var(--bg-elevated)] transition-colors"
+                                    className="p-0.5 rounded hover:bg-[var(--bg-elevated)] transition-colors flex-shrink-0"
                                   >
                                     <ChevronRight
                                       size={10}
@@ -336,7 +357,7 @@ export default function NavRail() {
                                     />
                                   </button>
                                 ) : (
-                                  <span className="w-4" />
+                                  <span className="w-3.5 flex-shrink-0" />
                                 )}
                                 <span className="text-xs truncate flex-1 font-medium" style={{ color: "var(--text-primary)" }}>
                                   {task.task_name}
@@ -345,19 +366,32 @@ export default function NavRail() {
 
                               {/* Sub-tasks list */}
                               {isTaskExpanded && hasSubtasks && (
-                                <div className="pl-5 space-y-1 py-0.5">
+                                <div className="pl-4 space-y-1 py-0.5">
                                   {(task.sub_tasks ?? []).map((st: any) => (
                                     <div
                                       key={st.id ?? Math.random()}
-                                      className="flex items-center gap-2 py-0.5 group/sub"
+                                      className="flex items-center gap-1.5 py-0.5 group/sub cursor-grab active:cursor-grabbing border border-transparent hover:border-[var(--border-subtle)] hover:bg-[var(--bg-hover)] rounded px-1 transition-all select-none"
+                                      {...(userRole !== "customer" && !st.is_completed ? {
+                                        "data-fc-draggable": "true",
+                                        "data-task-id": task.id,
+                                        "data-subtask-id": st.id,
+                                        "data-subtask-title": st.title,
+                                        "data-color": taskColor,
+                                      } : {})}
                                     >
+                                      {userRole !== "customer" && !st.is_completed && (
+                                        <GripVertical
+                                          size={9}
+                                          className="text-muted opacity-20 group-hover/sub:opacity-100 transition-opacity cursor-grab flex-shrink-0"
+                                        />
+                                      )}
                                       <button
                                         disabled={userRole === "customer"}
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           handleToggleSubTask(task, st.id, st.is_completed);
                                         }}
-                                        className="transition-colors disabled:cursor-not-allowed"
+                                        className="transition-colors disabled:cursor-not-allowed flex-shrink-0"
                                         style={{ color: st.is_completed ? "var(--status-ok)" : "var(--text-muted)" }}
                                       >
                                         {st.is_completed ? <CheckSquare size={11} /> : <Square size={11} />}

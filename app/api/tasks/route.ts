@@ -77,6 +77,78 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
 
+  // ─── Batch import template tasks ───
+  if (body.import_from_project_id && body.target_project_id) {
+    const { import_from_project_id, target_project_id, task_ids } = body;
+
+    let query = supabase
+      .from("tasks")
+      .select("*, sub_tasks(*)")
+      .eq("project_id", import_from_project_id);
+
+    if (task_ids && task_ids.length > 0) {
+      query = query.in("id", task_ids);
+    }
+
+    const { data: templateTasks, error: fetchErr } = await query;
+    if (fetchErr) {
+      return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+    }
+
+    if (templateTasks && templateTasks.length > 0) {
+      const taskIdMap: Record<string, string> = {};
+
+      for (const t of templateTasks) {
+        const { id: oldId, sub_tasks, precursor_task_id, created_at, updated_at, ...taskFields } = t as any;
+        const { data: newDbTask } = await supabase
+          .from("tasks")
+          .insert({
+            ...taskFields,
+            project_id: target_project_id,
+            is_template: false,
+            created_by: userId,
+            scheduled_date: taskFields.scheduled_date || null,
+            scheduled_end_date: taskFields.scheduled_end_date || null,
+            scheduled_time: taskFields.scheduled_time || null,
+            daily_hours_plan: null,
+            status: "pending"
+          })
+          .select("id")
+          .single();
+
+        if (newDbTask) {
+          taskIdMap[oldId] = newDbTask.id;
+
+          if (sub_tasks && sub_tasks.length > 0) {
+            const stInserts = sub_tasks.map((st: any) => ({
+              task_id: newDbTask.id,
+              title: st.title,
+              is_completed: false,
+              sort_order: st.sort_order,
+              created_by: userId
+            }));
+            await supabase.from("sub_tasks").insert(stInserts);
+          }
+        }
+      }
+
+      // Re-map dependencies
+      for (const t of templateTasks) {
+        const { id: oldId, precursor_task_id } = t as any;
+        if (precursor_task_id && taskIdMap[precursor_task_id]) {
+          const newTaskId = taskIdMap[oldId];
+          const newPrecursorId = taskIdMap[precursor_task_id];
+          await supabase
+            .from("tasks")
+            .update({ precursor_task_id: newPrecursorId })
+            .eq("id", newTaskId);
+        }
+      }
+    }
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  }
+
   const { sub_tasks, ...taskData } = body;
 
   const { data: task, error } = await supabase
@@ -105,6 +177,7 @@ export async function POST(req: NextRequest) {
       title:        st.title,
       is_completed: st.is_completed ?? false,
       sort_order:   idx,
+      scheduled_date: st.scheduled_date || null,
       created_by:   userId,
     }));
 

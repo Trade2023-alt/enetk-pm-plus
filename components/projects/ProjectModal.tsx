@@ -46,7 +46,7 @@ export default function ProjectModal({
 }: ProjectModalProps) {
   const { user } = useUser();
   const isAdmin = user?.publicMetadata?.role === "admin";
-  const { setProjects, projects } = useAppStore();
+  const { setProjects, projects, tasks, addTask, removeTask } = useAppStore();
 
   const [name, setName]               = useState("");
   const [description, setDescription] = useState("");
@@ -58,9 +58,38 @@ export default function ProjectModal({
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [cloneTasks, setCloneTasks]   = useState(true);
   const [templateProjectsList, setTemplateProjectsList] = useState<any[]>([]);
+  const [newTaskName, setNewTaskName] = useState("");
   const [saving, setSaving]           = useState(false);
   const [deleting, setDeleting]       = useState(false);
   const [error, setError]             = useState<string | null>(null);
+
+  const projectTasks = editProject ? tasks.filter(t => t.project_id === editProject.id) : [];
+
+  const handleAddTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTaskName.trim() || !editProject) return;
+
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          task_name: newTaskName.trim(),
+          project_id: editProject.id,
+          priority: "medium",
+          status: "pending",
+          is_template: isTemplate,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        addTask(data.task);
+        setNewTaskName("");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // Fetch customers and template projects list
   useEffect(() => {
@@ -470,6 +499,61 @@ export default function ProjectModal({
                 <span>Save as Template (excludes from active calendar/backlog)</span>
               </label>
             </div>
+
+            {/* Project Tasks Checklist */}
+            {editProject && (
+              <div className="border-t pt-4 space-y-2.5" style={{ borderColor: "var(--border-subtle)" }}>
+                <label className="block text-xs font-semibold" style={{ color: "var(--text-secondary)" }}>
+                  Project Tasks ({projectTasks.length})
+                </label>
+
+                {projectTasks.length > 0 && (
+                  <div className="space-y-1 max-h-[140px] overflow-y-auto pr-1">
+                    {projectTasks.map((t) => (
+                      <div key={t.id} className="flex items-center justify-between gap-2 p-1.5 rounded hover:bg-[var(--bg-hover)] transition-all group/taskrow border border-transparent">
+                        <span className="text-xs truncate flex-1" style={{ color: "var(--text-primary)" }}>{t.task_name}</span>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (confirm(`Are you sure you want to delete task "${t.task_name}"?`)) {
+                              try {
+                                const res = await fetch(`/api/tasks/${t.id}`, { method: "DELETE" });
+                                if (res.ok) removeTask(t.id);
+                              } catch (err) {
+                                console.error(err);
+                              }
+                            }
+                          }}
+                          className="p-1 rounded opacity-0 group-hover/taskrow:opacity-100 transition-opacity"
+                          style={{ color: "var(--text-muted)" }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--status-overdue)")}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <form onSubmit={handleAddTask} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newTaskName}
+                    onChange={(e) => setNewTaskName(e.target.value)}
+                    placeholder="+ Add new task to this project... (Enter to add)"
+                    className="w-full px-2.5 py-1.5 rounded text-xs outline-none border transition-all"
+                    style={{
+                      background: "var(--bg-elevated)",
+                      borderColor: "var(--border-subtle)",
+                      color: "var(--text-primary)",
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = "var(--maroon)")}
+                    onBlur={(e) => (e.target.style.borderColor = "var(--border-subtle)")}
+                  />
+                </form>
+              </div>
+            )}
           </div>
 
           {/* Footer */}

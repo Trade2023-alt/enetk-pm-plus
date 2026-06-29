@@ -87,9 +87,9 @@ export async function POST(req: NextRequest) {
             project_id: project.id,
             is_template: false,
             created_by: userId,
-            scheduled_date: null,
-            scheduled_end_date: null,
-            scheduled_time: null,
+            scheduled_date: taskFields.scheduled_date || null,
+            scheduled_end_date: taskFields.scheduled_end_date || null,
+            scheduled_time: taskFields.scheduled_time || null,
             daily_hours_plan: null,
             status: "pending"
           })
