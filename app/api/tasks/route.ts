@@ -3,12 +3,19 @@ import { auth } from "@clerk/nextjs/server";
 import { createServerClient, ensureUserExists } from "@/lib/supabase/server";
 
 // GET /api/tasks — fetch all tasks with relations
-// ... (GET handler unchanged)
 export async function GET(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServerClient();
+
+  // Fetch logged-in user profile to check role
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("role, customer_id")
+    .eq("id", userId)
+    .single();
+
   const { searchParams } = new URL(req.url);
   const projectId = searchParams.get("project_id");
 
@@ -23,7 +30,19 @@ export async function GET(req: NextRequest) {
     `)
     .order("created_at", { ascending: false });
 
-  if (projectId) {
+  if (userProfile?.role === "customer" && userProfile.customer_id) {
+    const { data: customerProjects } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("customer_id", userProfile.customer_id);
+
+    const projectIds = customerProjects?.map((p) => p.id) ?? [];
+    if (projectIds.length > 0) {
+      query = query.in("project_id", projectIds);
+    } else {
+      return NextResponse.json({ tasks: [] });
+    }
+  } else if (projectId) {
     query = query.eq("project_id", projectId);
   }
 
@@ -43,8 +62,20 @@ export async function POST(req: NextRequest) {
 
   await ensureUserExists(userId);
 
-  const body = await req.json();
   const supabase = createServerClient();
+
+  // Fetch logged-in user profile to check role
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", userId)
+    .single();
+
+  if (userProfile?.role === "customer") {
+    return NextResponse.json({ error: "Access denied: Customers cannot create tasks" }, { status: 403 });
+  }
+
+  const body = await req.json();
 
   const { sub_tasks, ...taskData } = body;
 
@@ -57,7 +88,9 @@ export async function POST(req: NextRequest) {
     .select(`
       *,
       project:projects(id, name, color, status),
-      sub_tasks(id, title, is_completed, sort_order)
+      assigned_user:users!tasks_assigned_to_fkey(id, full_name, email),
+      sub_tasks(id, title, is_completed, sort_order),
+      precursor:tasks!tasks_precursor_task_id_fkey(id, task_name)
     `)
     .single();
 
@@ -78,13 +111,15 @@ export async function POST(req: NextRequest) {
     await supabase.from("sub_tasks").insert(stInserts);
   }
 
-  // Refetch with sub-tasks
+  // Refetch with sub-tasks and all relations
   const { data: fullTask } = await supabase
     .from("tasks")
     .select(`
       *,
       project:projects(id, name, color, status),
-      sub_tasks(id, title, is_completed, sort_order)
+      assigned_user:users!tasks_assigned_to_fkey(id, full_name, email),
+      sub_tasks(id, title, is_completed, sort_order),
+      precursor:tasks!tasks_precursor_task_id_fkey(id, task_name)
     `)
     .eq("id", task!.id)
     .single();

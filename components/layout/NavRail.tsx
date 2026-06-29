@@ -22,13 +22,14 @@ interface NavItem {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
   adminOnly?: boolean;
+  restrictedRoles?: string[];
 }
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard",  icon: CalendarDays,   label: "Calendar"   },
   { href: "/projects",   icon: FolderKanban,   label: "Projects"   },
-  { href: "/customers",  icon: Users,          label: "Customers"  },
-  { href: "/admin",      icon: Settings,       label: "Team",      adminOnly: true },
+  { href: "/customers",  icon: Users,          label: "Customers", restrictedRoles: ["customer"] },
+  { href: "/users",      icon: Settings,       label: "Users",     adminOnly: true },
 ];
 
 export default function NavRail() {
@@ -37,8 +38,15 @@ export default function NavRail() {
   const pathname = usePathname();
   const { navRailExpanded, toggleNavRail } = useAppStore();
 
-  const isAdmin = user?.publicMetadata?.role === "admin";
+  const userRole = (user?.publicMetadata?.role as string) ?? "user";
+  const isAdmin = userRole === "admin";
   const expanded = navRailExpanded;
+
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
+    if (item.restrictedRoles?.includes(userRole)) return false;
+    return true;
+  });
 
   return (
     <aside
@@ -84,7 +92,7 @@ export default function NavRail() {
       {/* ── Navigation Items ── */}
       <nav className="flex-1 py-3 overflow-y-auto overflow-x-hidden">
         <div className="space-y-0.5 px-2">
-          {NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin).map((item) => {
+          {visibleItems.map((item) => {
             const isActive = pathname.startsWith(item.href);
             const Icon = item.icon;
 

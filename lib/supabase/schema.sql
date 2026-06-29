@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS public.users (
   email       TEXT NOT NULL UNIQUE,
   full_name   TEXT,
   avatar_url  TEXT,
-  role        TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+  role        TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin', 'customer')),
+  customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
   is_active   BOOLEAN DEFAULT TRUE,
   created_at  TIMESTAMPTZ DEFAULT NOW(),
   updated_at  TIMESTAMPTZ DEFAULT NOW()

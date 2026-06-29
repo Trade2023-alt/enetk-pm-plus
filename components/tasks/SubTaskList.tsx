@@ -8,9 +8,10 @@ interface SubTaskListProps {
   subTasks: Partial<SubTask & { scheduled_date?: string }>[];
   onChange: (subTasks: Partial<SubTask & { scheduled_date?: string }>[]) => void;
   showDates?: boolean; // show date picker per sub-task
+  disabled?: boolean;
 }
 
-export default function SubTaskList({ subTasks, onChange, showDates = true }: SubTaskListProps) {
+export default function SubTaskList({ subTasks, onChange, showDates = true, disabled = false }: SubTaskListProps) {
   const [newTitle, setNewTitle] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -20,6 +21,7 @@ export default function SubTaskList({ subTasks, onChange, showDates = true }: Su
     : 0;
 
   const addSubTask = () => {
+    if (disabled) return;
     const title = newTitle.trim();
     if (!title) return;
     onChange([...subTasks, { title, is_completed: false, sort_order: subTasks.length }]);
@@ -27,17 +29,25 @@ export default function SubTaskList({ subTasks, onChange, showDates = true }: Su
     inputRef.current?.focus();
   };
 
-  const toggle = (idx: number) =>
+  const toggle = (idx: number) => {
+    if (disabled) return;
     onChange(subTasks.map((s, i) => i === idx ? { ...s, is_completed: !s.is_completed } : s));
+  };
 
-  const remove = (idx: number) =>
+  const remove = (idx: number) => {
+    if (disabled) return;
     onChange(subTasks.filter((_, i) => i !== idx));
+  };
 
-  const updateTitle = (idx: number, title: string) =>
+  const updateTitle = (idx: number, title: string) => {
+    if (disabled) return;
     onChange(subTasks.map((s, i) => i === idx ? { ...s, title } : s));
+  };
 
-  const updateDate = (idx: number, date: string) =>
+  const updateDate = (idx: number, date: string) => {
+    if (disabled) return;
     onChange(subTasks.map((s, i) => i === idx ? { ...s, scheduled_date: date || undefined } : s));
+  };
 
   return (
     <div>
@@ -73,7 +83,8 @@ export default function SubTaskList({ subTasks, onChange, showDates = true }: Su
             {/* Check toggle */}
             <button
               onClick={() => toggle(idx)}
-              className="flex-shrink-0 transition-colors"
+              disabled={disabled}
+              className="flex-shrink-0 transition-colors disabled:cursor-not-allowed"
               style={{ color: st.is_completed ? "var(--status-ok)" : "var(--text-muted)" }}
             >
               {st.is_completed ? <CheckSquare size={13} /> : <Square size={13} />}
@@ -83,9 +94,10 @@ export default function SubTaskList({ subTasks, onChange, showDates = true }: Su
             <input
               type="text"
               value={st.title ?? ""}
+              disabled={disabled}
               onChange={(e) => updateTitle(idx, e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSubTask(); } }}
-              className="flex-1 bg-transparent text-xs outline-none min-w-0"
+              className="flex-1 bg-transparent text-xs outline-none min-w-0 disabled:text-slate-400"
               style={{
                 color: st.is_completed ? "var(--text-muted)" : "var(--text-primary)",
                 textDecoration: st.is_completed ? "line-through" : "none",
@@ -101,15 +113,16 @@ export default function SubTaskList({ subTasks, onChange, showDates = true }: Su
                 <input
                   type="date"
                   value={st.scheduled_date ?? ""}
+                  disabled={disabled}
                   onChange={(e) => updateDate(idx, e.target.value)}
-                  className="text-[10px] font-mono rounded border px-1 py-0.5 outline-none transition-colors"
+                  className="text-[10px] font-mono rounded border px-1 py-0.5 outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-70"
                   style={{
                     background: "var(--bg-elevated)",
                     borderColor: st.scheduled_date ? "var(--maroon)" : "var(--border-subtle)",
                     color: st.scheduled_date ? "var(--text-primary)" : "var(--text-muted)",
                     colorScheme: "dark",
                     width: st.scheduled_date ? "88px" : "30px",
-                    cursor: "pointer",
+                    cursor: disabled ? "default" : "pointer",
                   }}
                   title={st.scheduled_date ? `Scheduled: ${st.scheduled_date}` : "Set date"}
                 />
@@ -117,45 +130,49 @@ export default function SubTaskList({ subTasks, onChange, showDates = true }: Su
             )}
 
             {/* Remove */}
-            <button
-              onClick={() => remove(idx)}
-              className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{ color: "var(--text-muted)" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--status-overdue)")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
-            >
-              <Trash2 size={11} />
-            </button>
+            {!disabled && (
+              <button
+                onClick={() => remove(idx)}
+                className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ color: "var(--text-muted)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--status-overdue)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
+              >
+                <Trash2 size={11} />
+              </button>
+            )}
           </div>
         ))}
       </div>
 
       {/* Add row */}
-      <div
-        className="flex items-center gap-2 rounded-lg px-2 py-1.5 border border-dashed"
-        style={{ borderColor: "var(--border-subtle)" }}
-      >
-        <Plus size={11} style={{ color: "var(--text-muted)" }} />
-        <input
-          ref={inputRef}
-          type="text"
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSubTask(); } }}
-          placeholder="Add sub-task… (Enter to add)"
-          className="flex-1 bg-transparent text-xs outline-none"
-          style={{ color: "var(--text-primary)" }}
-        />
-        {newTitle && (
-          <button
-            onClick={addSubTask}
-            className="text-[10px] px-2 py-0.5 rounded transition-colors flex-shrink-0"
-            style={{ background: "var(--maroon-subtle)", color: "var(--maroon-light)" }}
-          >
-            Add
-          </button>
-        )}
-      </div>
+      {!disabled && (
+        <div
+          className="flex items-center gap-2 rounded-lg px-2 py-1.5 border border-dashed"
+          style={{ borderColor: "var(--border-subtle)" }}
+        >
+          <Plus size={11} style={{ color: "var(--text-muted)" }} />
+          <input
+            ref={inputRef}
+            type="text"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSubTask(); } }}
+            placeholder="Add sub-task… (Enter to add)"
+            className="flex-1 bg-transparent text-xs outline-none"
+            style={{ color: "var(--text-primary)" }}
+          />
+          {newTitle && (
+            <button
+              onClick={addSubTask}
+              className="text-[10px] px-2 py-0.5 rounded transition-colors flex-shrink-0"
+              style={{ background: "var(--maroon-subtle)", color: "var(--maroon-light)" }}
+            >
+              Add
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

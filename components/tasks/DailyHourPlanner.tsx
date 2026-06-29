@@ -8,6 +8,7 @@ interface DailyHourPlannerProps {
   endDate: string;             // "yyyy-MM-dd"
   plan: Record<string, number>; // { "2026-07-01": 4 }
   onChange: (plan: Record<string, number>) => void;
+  disabled?: boolean;
 }
 
 export default function DailyHourPlanner({
@@ -15,6 +16,7 @@ export default function DailyHourPlanner({
   endDate,
   plan,
   onChange,
+  disabled = false,
 }: DailyHourPlannerProps) {
   const days = useMemo(() => {
     try {
@@ -102,12 +104,13 @@ export default function DailyHourPlanner({
                 <input
                   type="number"
                   value={hrs || ""}
+                  disabled={disabled}
                   onChange={(e) => setHours(key, e.target.value)}
                   min={0}
                   max={24}
                   step={0.5}
                   placeholder="0"
-                  className="w-10 text-center rounded border text-xs outline-none py-0.5 font-mono"
+                  className="w-10 text-center rounded border text-xs outline-none py-0.5 font-mono disabled:opacity-75 disabled:cursor-not-allowed"
                   style={{
                     background: "var(--bg-elevated)",
                     borderColor: hrs > 0 ? "var(--maroon)" : "var(--border-subtle)",

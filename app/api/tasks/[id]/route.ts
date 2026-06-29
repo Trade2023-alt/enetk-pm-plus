@@ -16,6 +16,18 @@ export async function PATCH(
 
   const { id } = await params;
   const supabase = createServerClient();
+
+  // Fetch logged-in user profile to check role
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", userId)
+    .single();
+
+  if (userProfile?.role === "customer") {
+    return NextResponse.json({ error: "Access denied: Customers cannot edit tasks" }, { status: 403 });
+  }
+
   const body = await req.json() as Record<string, unknown>;
   const { sub_tasks, ...taskData } = body;
 
@@ -27,7 +39,9 @@ export async function PATCH(
     .select(`
       *,
       project:projects(id, name, color, status),
-      sub_tasks(id, title, is_completed, sort_order)
+      assigned_user:users!tasks_assigned_to_fkey(id, full_name, email),
+      sub_tasks(id, title, is_completed, sort_order),
+      precursor:tasks!tasks_precursor_task_id_fkey(id, task_name)
     `)
     .single();
 
@@ -51,13 +65,15 @@ export async function PATCH(
     }
   }
 
-  // Refetch with fresh sub-tasks
+  // Refetch with fresh sub-tasks and relations
   const { data: fullTask } = await supabase
     .from("tasks")
     .select(`
       *,
       project:projects(id, name, color, status),
-      sub_tasks(id, title, is_completed, sort_order)
+      assigned_user:users!tasks_assigned_to_fkey(id, full_name, email),
+      sub_tasks(id, title, is_completed, sort_order),
+      precursor:tasks!tasks_precursor_task_id_fkey(id, task_name)
     `)
     .eq("id", id)
     .single();

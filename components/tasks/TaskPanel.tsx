@@ -74,6 +74,7 @@ function onBlurBorder(e: React.FocusEvent<HTMLElement>) {
 export default function TaskPanel() {
   const { user } = useUser();
   const isAdmin = user?.publicMetadata?.role === "admin";
+  const isReadOnly = user?.publicMetadata?.role === "customer";
 
   const {
     taskPanelOpen, taskPanelMode, editingTask, defaultDate, defaultEndDate,
@@ -88,6 +89,7 @@ export default function TaskPanel() {
   const [endDate,       setEndDate]       = useState("");
   const [priority,      setPriority]      = useState<"low"|"medium"|"high"|"critical">("medium");
   const [status,        setStatus]        = useState<"pending"|"in_progress"|"completed"|"blocked">("pending");
+  const [assignedTo,    setAssignedTo]    = useState("");
   const [description,   setDescription]   = useState("");
   const [subTasks,      setSubTasks]      = useState<any[]>([]);
   const [dailyPlan,     setDailyPlan]     = useState<Record<string,number>>({});
@@ -96,6 +98,19 @@ export default function TaskPanel() {
   const [deleting,      setDeleting]      = useState(false);
   const [error,         setError]         = useState<string|null>(null);
   const [showAdvanced,  setShowAdvanced]  = useState(false);
+  const [usersList,     setUsersList]     = useState<any[]>([]);
+
+  // Fetch users list for assignments (admins and employees only)
+  useEffect(() => {
+    if (taskPanelOpen && !isReadOnly) {
+      fetch("/api/users")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.users) setUsersList(data.users);
+        })
+        .catch(console.error);
+    }
+  }, [taskPanelOpen, isReadOnly]);
 
   // Populate form when opening
   useEffect(() => {
@@ -109,6 +124,7 @@ export default function TaskPanel() {
       setEndDate(t.scheduled_end_date ?? "");
       setPriority(t.priority ?? "medium");
       setStatus(t.status ?? "pending");
+      setAssignedTo(t.assigned_to ?? "");
       setDescription(t.description ?? "");
       setSubTasks(t.sub_tasks ?? []);
       setDailyPlan(t.daily_hours_plan ?? {});
@@ -121,6 +137,7 @@ export default function TaskPanel() {
       setEndDate(defaultEndDate ?? "");
       setPriority("medium");
       setStatus("pending");
+      setAssignedTo("");
       setDescription("");
       setSubTasks([]);
       setDailyPlan({});
@@ -156,6 +173,7 @@ export default function TaskPanel() {
       scheduled_end_date: endDate || null,
       priority,
       status,
+      assigned_to:        assignedTo || null,
       description:        description || null,
       daily_hours_plan:   Object.keys(dailyPlan).length ? dailyPlan : null,
       precursor_task_id:  precursorId || null,
@@ -307,10 +325,11 @@ export default function TaskPanel() {
                 <input
                   type="text"
                   value={taskName}
+                  disabled={isReadOnly}
                   onChange={(e) => setTaskName(e.target.value)}
                   placeholder="What needs to be done?"
                   autoFocus
-                  className={inputCls + " text-sm font-medium"}
+                  className={inputCls + " text-sm font-medium disabled:opacity-85 disabled:cursor-not-allowed"}
                   style={{ ...inputStyle, fontSize: "13px" }}
                   onFocus={onFocusBorder}
                   onBlur={onBlurBorder}
@@ -326,8 +345,9 @@ export default function TaskPanel() {
                   />
                   <select
                     value={projectId}
+                    disabled={isReadOnly}
                     onChange={(e) => setProjectId(e.target.value)}
-                    className={inputCls}
+                    className={inputCls + " disabled:opacity-85 disabled:cursor-not-allowed"}
                     style={{ ...inputStyle, paddingLeft: "28px" }}
                     onFocus={onFocusBorder}
                     onBlur={onBlurBorder}
@@ -340,14 +360,64 @@ export default function TaskPanel() {
                 </div>
               </Field>
 
+              {/* Assigned To */}
+              {!isReadOnly && (
+                <Field label="Assigned To">
+                  <div className="relative">
+                    <Users
+                      size={12}
+                      style={{ color: "var(--text-muted)", position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }}
+                    />
+                    <select
+                      value={assignedTo}
+                      onChange={(e) => setAssignedTo(e.target.value)}
+                      className={inputCls}
+                      style={{ ...inputStyle, paddingLeft: "28px" }}
+                      onFocus={onFocusBorder}
+                      onBlur={onBlurBorder}
+                    >
+                      <option value="">Unassigned</option>
+                      {usersList.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.full_name ?? u.email}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </Field>
+              )}
+
+              {isReadOnly && assignedTo && (
+                <Field label="Assigned To">
+                  <div className="relative">
+                    <Users
+                      size={12}
+                      style={{ color: "var(--text-muted)", position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }}
+                    />
+                    <input
+                      type="text"
+                      disabled
+                      value={
+                        editingTask?.assigned_user
+                          ? (editingTask.assigned_user as any).full_name ?? (editingTask.assigned_user as any).email
+                          : "Unassigned"
+                      }
+                      className={inputCls + " disabled:opacity-85 disabled:cursor-not-allowed"}
+                      style={{ ...inputStyle, paddingLeft: "28px" }}
+                    />
+                  </div>
+                </Field>
+              )}
+
               {/* Status */}
               <Field label="Status">
                 <div className="grid grid-cols-4 gap-1">
                   {(["pending", "in_progress", "completed", "blocked"] as const).map((s) => (
                     <button
                       key={s}
-                      onClick={() => setStatus(s)}
-                      className="py-1 rounded text-[10px] font-medium border transition-all capitalize"
+                      disabled={isReadOnly}
+                      onClick={() => !isReadOnly && setStatus(s)}
+                      className="py-1 rounded text-[10px] font-medium border transition-all capitalize disabled:cursor-not-allowed"
                       style={{
                         background:   status === s ? "var(--maroon-subtle)" : "transparent",
                         borderColor:  status === s ? "var(--maroon)" : "var(--border-subtle)",
@@ -361,7 +431,7 @@ export default function TaskPanel() {
               </Field>
             </div>
           </Section>
-
+ 
           {/* ── Scheduling ── */}
           <Section icon={CalendarDays} label="Schedule">
             <div className="space-y-2.5">
@@ -370,12 +440,13 @@ export default function TaskPanel() {
                   <input
                     type="date"
                     value={startDate}
+                    disabled={isReadOnly}
                     onChange={(e) => {
                       setStartDate(e.target.value);
                       // Auto-clear end if before start
                       if (endDate && e.target.value > endDate) setEndDate("");
                     }}
-                    className={inputCls}
+                    className={inputCls + " disabled:opacity-85 disabled:cursor-not-allowed"}
                     style={inputStyle}
                     onFocus={onFocusBorder}
                     onBlur={onBlurBorder}
@@ -386,15 +457,16 @@ export default function TaskPanel() {
                     type="date"
                     value={endDate}
                     min={startDate}
+                    disabled={isReadOnly}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className={inputCls}
+                    className={inputCls + " disabled:opacity-85 disabled:cursor-not-allowed"}
                     style={{ ...inputStyle, borderColor: endDate ? "var(--maroon)" : "var(--border-subtle)" }}
                     onFocus={onFocusBorder}
                     onBlur={onBlurBorder}
                   />
                 </Field>
               </div>
-
+ 
               {/* Daily hours planner — only when multi-day */}
               {startDate && endDate && endDate > startDate && (
                 <div
@@ -405,19 +477,21 @@ export default function TaskPanel() {
                     startDate={startDate}
                     endDate={endDate}
                     plan={dailyPlan}
-                    onChange={setDailyPlan}
+                    disabled={isReadOnly}
+                    onChange={isReadOnly ? () => {} : setDailyPlan}
                   />
                 </div>
               )}
             </div>
           </Section>
-
+ 
           {/* ── Sub-Tasks ── */}
           <Section icon={Clock} label="Sub-Tasks">
             <SubTaskList
               subTasks={subTasks}
               onChange={setSubTasks}
               showDates={true}
+              disabled={isReadOnly}
             />
           </Section>
 
@@ -448,8 +522,9 @@ export default function TaskPanel() {
                     {(["low","medium","high","critical"] as const).map((p) => (
                       <button
                         key={p}
-                        onClick={() => setPriority(p)}
-                        className="py-1 rounded text-[10px] font-medium border transition-all capitalize"
+                        disabled={isReadOnly}
+                        onClick={() => !isReadOnly && setPriority(p)}
+                        className="py-1 rounded text-[10px] font-medium border transition-all capitalize disabled:cursor-not-allowed"
                         style={{
                           background:  priority === p ? priorityColor[p] + "22" : "transparent",
                           borderColor: priority === p ? priorityColor[p] : "var(--border-subtle)",
@@ -466,10 +541,11 @@ export default function TaskPanel() {
                 <Field label="Notes">
                   <textarea
                     value={description}
+                    disabled={isReadOnly}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Additional details, scope, access notes..."
                     rows={3}
-                    className={inputCls + " resize-none"}
+                    className={inputCls + " resize-none disabled:opacity-85 disabled:cursor-not-allowed"}
                     style={inputStyle}
                     onFocus={onFocusBorder}
                     onBlur={onBlurBorder}
@@ -485,8 +561,9 @@ export default function TaskPanel() {
                     />
                     <select
                       value={precursorId}
+                      disabled={isReadOnly}
                       onChange={(e) => setPrecursorId(e.target.value)}
-                      className={inputCls}
+                      className={inputCls + " disabled:opacity-85 disabled:cursor-not-allowed"}
                       style={{ ...inputStyle, paddingLeft: "28px" }}
                       onFocus={onFocusBorder}
                       onBlur={onBlurBorder}
@@ -510,27 +587,41 @@ export default function TaskPanel() {
           className="flex items-center justify-between gap-2 px-4 py-3 border-t flex-shrink-0"
           style={{ background: "var(--bg-surface)", borderColor: "var(--border-subtle)" }}
         >
-          <button
-            onClick={closeTaskPanel}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
-            style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)", background: "transparent" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-          >
-            Cancel
-          </button>
+          {isReadOnly ? (
+            <button
+              onClick={closeTaskPanel}
+              className="w-full py-1.5 rounded-lg text-xs font-semibold text-center transition-colors border"
+              style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)", background: "transparent" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              Close
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={closeTaskPanel}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+                style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)", background: "transparent" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                Cancel
+              </button>
 
-          <button
-            onClick={handleSave}
-            disabled={saving || !taskName.trim()}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
-            style={{ background: "var(--maroon)", color: "white" }}
-            onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = "var(--maroon-light)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "var(--maroon)"; }}
-          >
-            <Save size={12} />
-            {saving ? "Saving…" : taskPanelMode === "edit" ? "Save Changes" : "Create Task"}
-          </button>
+              <button
+                onClick={handleSave}
+                disabled={saving || !taskName.trim()}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+                style={{ background: "var(--maroon)", color: "white" }}
+                onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = "var(--maroon-light)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "var(--maroon)"; }}
+              >
+                <Save size={12} />
+                {saving ? "Saving…" : taskPanelMode === "edit" ? "Save Changes" : "Create Task"}
+              </button>
+            </>
+          )}
         </div>
       </aside>
 

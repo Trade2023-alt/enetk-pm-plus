@@ -12,6 +12,18 @@ export async function PATCH(
 
   const { id } = await params;
   const supabase = createServerClient();
+
+  // Fetch logged-in user profile to check role
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", userId)
+    .single();
+
+  if (userProfile?.role === "customer") {
+    return NextResponse.json({ error: "Access denied: Customers cannot edit projects" }, { status: 403 });
+  }
+
   const body = await req.json();
 
   const { data, error } = await supabase
