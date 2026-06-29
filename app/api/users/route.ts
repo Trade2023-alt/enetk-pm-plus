@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { createServerClient } from "@/lib/supabase/server";
 
 // GET /api/users — user list for admin and team members
@@ -13,6 +13,37 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = createServerClient();
+
+  // Proactive sync: Fetch users from Clerk and sync any missing users to Supabase database
+  try {
+    const client = await clerkClient();
+    const clerkUsersList = await client.users.getUserList({ limit: 100 });
+    
+    // Fetch current user IDs in Supabase
+    const { data: dbUsers } = await supabase.from("users").select("id");
+    const dbUserIds = new Set(dbUsers?.map((u) => u.id) ?? []);
+
+    for (const u of clerkUsersList.data) {
+      if (!dbUserIds.has(u.id)) {
+        const email = u.emailAddresses?.[0]?.emailAddress ?? "";
+        const fullName = [u.firstName, u.lastName].filter(Boolean).join(" ") || null;
+        const uRole = (u.publicMetadata?.role as string) ?? "user";
+
+        await supabase.from("users").insert({
+          id: u.id,
+          email,
+          full_name: fullName,
+          avatar_url: u.imageUrl ?? null,
+          role: uRole,
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        });
+      }
+    }
+  } catch (syncErr) {
+    console.error("Failed to auto-sync Clerk users during GET:", syncErr);
+  }
+
   const { data, error } = await supabase
     .from("users")
     .select("id, full_name, email, role, is_active, created_at, customer_id")
