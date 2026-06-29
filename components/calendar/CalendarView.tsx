@@ -214,7 +214,7 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
           const task = tasks.find(t => t.id === parentTaskId);
           if (task) {
             const updatedSubTasks = (task.sub_tasks ?? []).map((st: any) =>
-              st.id === subTaskId ? { ...st, scheduled_date: newDate } : st
+              st.id === subTaskId ? { ...st, scheduled_date: newDate, on_calendar: true } : st
             );
             updateTask(parentTaskId, { sub_tasks: updatedSubTasks } as any);
           }
@@ -223,7 +223,7 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
           const res = await fetch(`/api/sub-tasks/${subTaskId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ scheduled_date: newDate }),
+            body: JSON.stringify({ scheduled_date: newDate, on_calendar: true }),
           });
           if (!res.ok) throw new Error();
         } catch {
@@ -243,12 +243,12 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
 
       if (isProject) {
         const projectId = event.id.replace("proj-", "");
-        updateProject(projectId, { start_date: newDate, end_date: endDate });
+        updateProject(projectId, { start_date: newDate, end_date: endDate, on_calendar: true });
         try {
           const res = await fetch(`/api/projects/${projectId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ start_date: newDate, end_date: endDate }),
+            body: JSON.stringify({ start_date: newDate, end_date: endDate, on_calendar: true }),
           });
           if (!res.ok) throw new Error();
         } catch {
@@ -268,12 +268,12 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
           delete currentPlan[oldDateStr];
           currentPlan[newDate] = hrsVal;
 
-          updateTask(taskId, { daily_hours_plan: currentPlan } as any);
+          updateTask(taskId, { daily_hours_plan: currentPlan, on_calendar: true } as any);
           try {
             const res = await fetch(`/api/tasks/${taskId}`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ daily_hours_plan: currentPlan }),
+              body: JSON.stringify({ daily_hours_plan: currentPlan, on_calendar: true }),
             });
             if (!res.ok) throw new Error();
           } catch {
@@ -286,12 +286,12 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
       }
 
       const taskId  = event.id;
-      updateTask(taskId, { scheduled_date: newDate, scheduled_end_date: endDate } as any);
+      updateTask(taskId, { scheduled_date: newDate, scheduled_end_date: endDate, on_calendar: true } as any);
       try {
         const res = await fetch(`/api/tasks/${taskId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ scheduled_date: newDate, scheduled_end_date: endDate }),
+          body: JSON.stringify({ scheduled_date: newDate, scheduled_end_date: endDate, on_calendar: true }),
         });
         if (!res.ok) throw new Error();
       } catch {
@@ -314,12 +314,12 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
 
       if (isProject) {
         const projectId = event.id.replace("proj-", "");
-        updateProject(projectId, { start_date: startDate, end_date: endDate });
+        updateProject(projectId, { start_date: startDate, end_date: endDate, on_calendar: true });
         try {
           const res = await fetch(`/api/projects/${projectId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ start_date: startDate, end_date: endDate }),
+            body: JSON.stringify({ start_date: startDate, end_date: endDate, on_calendar: true }),
           });
           if (!res.ok) throw new Error();
         } catch {
@@ -330,12 +330,12 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
 
       // Default: Task
       const taskId = event.id;
-      updateTask(taskId, { scheduled_date: startDate, scheduled_end_date: endDate } as any);
+      updateTask(taskId, { scheduled_date: startDate, scheduled_end_date: endDate, on_calendar: true } as any);
       try {
         const res = await fetch(`/api/tasks/${taskId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ scheduled_date: startDate, scheduled_end_date: endDate }),
+          body: JSON.stringify({ scheduled_date: startDate, scheduled_end_date: endDate, on_calendar: true }),
         });
         if (!res.ok) throw new Error();
       } catch {
@@ -362,7 +362,7 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
           const task = tasks.find(t => t.id === parentTaskId);
           if (task) {
             const updatedSubTasks = (task.sub_tasks ?? []).map((st: any) =>
-              st.id === subTaskId ? { ...st, scheduled_date: newDate } : st
+              st.id === subTaskId ? { ...st, scheduled_date: newDate, on_calendar: true } : st
             );
             updateTask(parentTaskId, { sub_tasks: updatedSubTasks } as any);
           }
@@ -372,14 +372,14 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
           await fetch(`/api/sub-tasks/${subTaskId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ scheduled_date: newDate }),
+            body: JSON.stringify({ scheduled_date: newDate, on_calendar: true }),
           });
         } catch {
           if (parentTaskId) {
             const task = tasks.find(t => t.id === parentTaskId);
             if (task) {
               const updatedSubTasks = (task.sub_tasks ?? []).map((st: any) =>
-                st.id === subTaskId ? { ...st, scheduled_date: null } : st
+                st.id === subTaskId ? { ...st, scheduled_date: null, on_calendar: false } : st
               );
               updateTask(parentTaskId, { sub_tasks: updatedSubTasks } as any);
             }
@@ -391,31 +391,31 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
       if (isProject) {
         const projectId = event.extendedProps?.projectId || event.id.replace("proj-", "");
         event.remove();
-        updateProject(projectId, { start_date: newDate, end_date: newDate });
+        updateProject(projectId, { start_date: newDate, end_date: newDate, on_calendar: true });
         try {
           await fetch(`/api/projects/${projectId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ start_date: newDate, end_date: newDate }),
+            body: JSON.stringify({ start_date: newDate, end_date: newDate, on_calendar: true }),
           });
         } catch {
-          updateProject(projectId, { start_date: null, end_date: null });
+          updateProject(projectId, { start_date: null, end_date: null, on_calendar: false });
         }
         return;
       }
 
       // Default: Task
       const taskId  = event.extendedProps?.taskId ?? event.id;
-      updateTask(taskId, { scheduled_date: newDate, scheduled_time: undefined });
+      updateTask(taskId, { scheduled_date: newDate, scheduled_time: undefined, on_calendar: true });
       event.remove();
       try {
         await fetch(`/api/tasks/${taskId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ scheduled_date: newDate, scheduled_time: null }),
+          body: JSON.stringify({ scheduled_date: newDate, scheduled_time: null, on_calendar: true }),
         });
       } catch {
-        updateTask(taskId, { scheduled_date: null as any });
+        updateTask(taskId, { scheduled_date: null as any, on_calendar: false });
       }
     },
     [updateTask, updateProject, tasks]
