@@ -34,6 +34,9 @@ interface ProjectModalProps {
     status: string;
     customer_id?: string | null;
     is_template?: boolean;
+    deadline?: string | null;
+    estimated_hours?: number | null;
+    used_hours?: number | null;
   } | null;
   onSaved: () => void;
 }
@@ -53,6 +56,9 @@ export default function ProjectModal({
   const [color, setColor]             = useState(COLOR_SWATCHES[0].hex);
   const [status, setStatus]           = useState<"opportunity" | "estimate" | "active" | "on_hold" | "completed" | "invoiced" | "paid" | "archived">("opportunity");
   const [customerId, setCustomerId]   = useState("");
+  const [deadline, setDeadline]       = useState("");
+  const [estimatedHours, setEstimatedHours] = useState<number | "">("");
+  const [usedHours, setUsedHours]       = useState<number | "">("");
   const [customers, setCustomers]     = useState<any[]>([]);
   const [isTemplate, setIsTemplate]   = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
@@ -122,6 +128,9 @@ export default function ProjectModal({
       setStatus(editProject.status as any);
       setCustomerId(editProject.customer_id ?? "");
       setIsTemplate(editProject.is_template ?? false);
+      setDeadline(editProject.deadline ?? "");
+      setEstimatedHours(editProject.estimated_hours ?? "");
+      setUsedHours(editProject.used_hours ?? "");
     } else {
       setName("");
       setDescription("");
@@ -131,6 +140,9 @@ export default function ProjectModal({
       setIsTemplate(false);
       setSelectedTemplateId("");
       setCloneTasks(true);
+      setDeadline("");
+      setEstimatedHours("");
+      setUsedHours("");
     }
     setError(null);
   }, [open, editProject]);
@@ -160,6 +172,9 @@ export default function ProjectModal({
         status,
         customer_id: customerId || null,
         is_template: isTemplate,
+        deadline: deadline || null,
+        estimated_hours: estimatedHours === "" ? null : Number(estimatedHours),
+        used_hours: usedHours === "" ? 0 : Number(usedHours),
         clone_from_project_id: !editProject ? (selectedTemplateId || null) : null,
         clone_tasks: !editProject ? cloneTasks : false,
       };
@@ -411,6 +426,72 @@ export default function ProjectModal({
                 onFocus={(e) => (e.target.style.borderColor = "var(--maroon)")}
                 onBlur={(e) => (e.target.style.borderColor = "var(--border-subtle)")}
               />
+            </div>
+
+            {/* Deadline & Hours */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>
+                  Deadline
+                </label>
+                <input
+                  type="date"
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg border text-xs outline-none transition-all cursor-pointer"
+                  style={{
+                    background: "var(--bg-surface)",
+                    borderColor: "var(--border-subtle)",
+                    color: "var(--text-primary)",
+                    colorScheme: "dark",
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = "var(--maroon)")}
+                  onBlur={(e) => (e.target.style.borderColor = "var(--border-subtle)")}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }} title="Estimated Hours">
+                    Est. Hours
+                  </label>
+                  <input
+                    type="number"
+                    value={estimatedHours}
+                    onChange={(e) => setEstimatedHours(e.target.value === "" ? "" : Number(e.target.value))}
+                    min={0}
+                    placeholder="0"
+                    className="w-full px-2 py-1.5 rounded-lg border text-xs outline-none transition-all font-mono text-center"
+                    style={{
+                      background: "var(--bg-surface)",
+                      borderColor: "var(--border-subtle)",
+                      color: "var(--text-primary)",
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = "var(--maroon)")}
+                    onBlur={(e) => (e.target.style.borderColor = "var(--border-subtle)")}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }} title="Used Hours">
+                    Used Hours
+                  </label>
+                  <input
+                    type="number"
+                    value={usedHours}
+                    onChange={(e) => setUsedHours(e.target.value === "" ? "" : Number(e.target.value))}
+                    min={0}
+                    placeholder="0"
+                    className="w-full px-2 py-1.5 rounded-lg border text-xs outline-none transition-all font-mono text-center"
+                    style={{
+                      background: "var(--bg-surface)",
+                      borderColor: "var(--border-subtle)",
+                      color: "var(--text-primary)",
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = "var(--maroon)")}
+                    onBlur={(e) => (e.target.style.borderColor = "var(--border-subtle)")}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Color swatches */}

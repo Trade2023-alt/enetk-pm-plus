@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Plus, Trash2, CheckSquare, Square, Calendar, Users } from "lucide-react";
+import { Plus, Trash2, CheckSquare, Square, Calendar, Users, Flag } from "lucide-react";
 import type { SubTask } from "@/lib/supabase/types";
 
 interface SubTaskListProps {
@@ -53,6 +53,23 @@ export default function SubTaskList({ subTasks, onChange, showDates = true, disa
   const updateAssignedTo = (idx: number, userId: string | null) => {
     if (disabled) return;
     onChange(subTasks.map((s, i) => i === idx ? { ...s, assigned_to: userId } : s));
+  };
+
+  const updateDeadline = (idx: number, deadline: string) => {
+    if (disabled) return;
+    onChange(subTasks.map((s, i) => i === idx ? { ...s, deadline: deadline || null } : s));
+  };
+
+  const updateEstimatedHours = (idx: number, hrs: string) => {
+    if (disabled) return;
+    const val = hrs === "" ? null : Math.max(0, parseFloat(hrs) || 0);
+    onChange(subTasks.map((s, i) => i === idx ? { ...s, estimated_hours: val } : s));
+  };
+
+  const updateUsedHours = (idx: number, hrs: string) => {
+    if (disabled) return;
+    const val = hrs === "" ? null : Math.max(0, parseFloat(hrs) || 0);
+    onChange(subTasks.map((s, i) => i === idx ? { ...s, used_hours: val } : s));
   };
 
   return (
@@ -110,7 +127,7 @@ export default function SubTaskList({ subTasks, onChange, showDates = true, disa
               }}
             />
 
-            {/* Date picker (when showDates) */}
+            {/* Scheduled Date picker */}
             {showDates && (
               <div className="flex items-center gap-1 flex-shrink-0">
                 {!st.scheduled_date && (
@@ -134,6 +151,67 @@ export default function SubTaskList({ subTasks, onChange, showDates = true, disa
                 />
               </div>
             )}
+
+            {/* Deadline picker */}
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {!st.deadline && (
+                <Flag size={10} style={{ color: "var(--text-muted)" }} />
+              )}
+              <input
+                type="date"
+                value={st.deadline ?? ""}
+                disabled={disabled}
+                onChange={(e) => updateDeadline(idx, e.target.value)}
+                className="text-[10px] font-mono rounded border px-1 py-0.5 outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+                style={{
+                  background: "var(--bg-elevated)",
+                  borderColor: st.deadline ? "var(--status-warning)" : "var(--border-subtle)",
+                  color: st.deadline ? "var(--text-primary)" : "var(--text-muted)",
+                  colorScheme: "dark",
+                  width: st.deadline ? "88px" : "30px",
+                  cursor: disabled ? "default" : "pointer",
+                }}
+                title={st.deadline ? `Deadline: ${st.deadline}` : "Set deadline"}
+              />
+            </div>
+
+            {/* Estimated Hours */}
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <input
+                type="number"
+                value={st.estimated_hours ?? ""}
+                placeholder="est"
+                disabled={disabled}
+                onChange={(e) => updateEstimatedHours(idx, e.target.value)}
+                className="text-[10px] font-mono rounded border px-1 py-0.5 outline-none text-center disabled:cursor-not-allowed disabled:opacity-70"
+                style={{
+                  background: "var(--bg-elevated)",
+                  borderColor: st.estimated_hours ? "var(--maroon)" : "var(--border-subtle)",
+                  color: st.estimated_hours ? "var(--text-primary)" : "var(--text-muted)",
+                  width: st.estimated_hours ? "45px" : "30px",
+                }}
+                title={st.estimated_hours ? `Estimated: ${st.estimated_hours}h` : "Estimated hours"}
+              />
+            </div>
+
+            {/* Used Hours */}
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <input
+                type="number"
+                value={st.used_hours ?? ""}
+                placeholder="usd"
+                disabled={disabled}
+                onChange={(e) => updateUsedHours(idx, e.target.value)}
+                className="text-[10px] font-mono rounded border px-1 py-0.5 outline-none text-center disabled:cursor-not-allowed disabled:opacity-70"
+                style={{
+                  background: "var(--bg-elevated)",
+                  borderColor: st.used_hours ? "var(--status-ok)" : "var(--border-subtle)",
+                  color: st.used_hours ? "var(--text-primary)" : "var(--text-muted)",
+                  width: st.used_hours ? "45px" : "30px",
+                }}
+                title={st.used_hours ? `Used: ${st.used_hours}h` : "Used hours"}
+              />
+            </div>
 
             {/* User assignment dropdown */}
             {usersList && usersList.length > 0 && (

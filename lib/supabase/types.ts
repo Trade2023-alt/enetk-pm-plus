@@ -130,8 +130,10 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           customer_id: string | null
+          deadline: string | null
           description: string | null
           end_date: string | null
+          estimated_hours: number | null
           id: string
           is_template: boolean
           name: string
@@ -139,14 +141,17 @@ export type Database = {
           start_date: string | null
           status: string
           updated_at: string | null
+          used_hours: number | null
         }
         Insert: {
           color?: string | null
           created_at?: string | null
           created_by?: string | null
           customer_id?: string | null
+          deadline?: string | null
           description?: string | null
           end_date?: string | null
+          estimated_hours?: number | null
           id?: string
           is_template?: boolean
           name: string
@@ -154,14 +159,17 @@ export type Database = {
           start_date?: string | null
           status?: string
           updated_at?: string | null
+          used_hours?: number | null
         }
         Update: {
           color?: string | null
           created_at?: string | null
           created_by?: string | null
           customer_id?: string | null
+          deadline?: string | null
           description?: string | null
           end_date?: string | null
+          estimated_hours?: number | null
           id?: string
           is_template?: boolean
           name?: string
@@ -169,6 +177,7 @@ export type Database = {
           start_date?: string | null
           status?: string
           updated_at?: string | null
+          used_hours?: number | null
         }
         Relationships: [
           {
@@ -192,6 +201,8 @@ export type Database = {
           assigned_to: string | null
           created_at: string | null
           created_by: string | null
+          deadline: string | null
+          estimated_hours: number | null
           id: string
           is_completed: boolean | null
           on_calendar: boolean | null
@@ -199,11 +210,14 @@ export type Database = {
           sort_order: number | null
           task_id: string
           title: string
+          used_hours: number | null
         }
         Insert: {
           assigned_to?: string | null
           created_at?: string | null
           created_by?: string | null
+          deadline?: string | null
+          estimated_hours?: number | null
           id?: string
           is_completed?: boolean | null
           on_calendar?: boolean | null
@@ -211,11 +225,14 @@ export type Database = {
           sort_order?: number | null
           task_id: string
           title: string
+          used_hours?: number | null
         }
         Update: {
           assigned_to?: string | null
           created_at?: string | null
           created_by?: string | null
+          deadline?: string | null
+          estimated_hours?: number | null
           id?: string
           is_completed?: boolean | null
           on_calendar?: boolean | null
@@ -223,6 +240,7 @@ export type Database = {
           sort_order?: number | null
           task_id?: string
           title?: string
+          used_hours?: number | null
         }
         Relationships: [
           {
