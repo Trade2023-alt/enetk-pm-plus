@@ -86,8 +86,12 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
             }
 
             // Apply employee filter
-            if (selectedEmployeeId && dailyAssignedTo !== selectedEmployeeId) {
-              return;
+            if (selectedEmployeeId) {
+              if (selectedEmployeeId === "unassigned") {
+                if (dailyAssignedTo) return;
+              } else if (dailyAssignedTo !== selectedEmployeeId) {
+                return;
+              }
             }
 
             list.push({
@@ -105,8 +109,12 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
           });
         } else {
           // Apply employee filter
-          if (selectedEmployeeId && taskAssignedTo !== selectedEmployeeId) {
-            return;
+          if (selectedEmployeeId) {
+            if (selectedEmployeeId === "unassigned") {
+              if (taskAssignedTo) return;
+            } else if (taskAssignedTo !== selectedEmployeeId) {
+              return;
+            }
           }
 
           // Fallback: render single event spanning from scheduled_date to scheduled_end_date
@@ -143,8 +151,12 @@ export default function CalendarView({ calendarRef }: CalendarViewProps) {
         if (!st.scheduled_date || st.is_completed) return;
         
         // Apply employee filter
-        if (selectedEmployeeId && st.assigned_to !== selectedEmployeeId) {
-          return;
+        if (selectedEmployeeId) {
+          if (selectedEmployeeId === "unassigned") {
+            if (st.assigned_to) return;
+          } else if (st.assigned_to !== selectedEmployeeId) {
+            return;
+          }
         }
 
         const assignedUser = st.assigned_to ? usersList.find(u => u.id === st.assigned_to) : null;

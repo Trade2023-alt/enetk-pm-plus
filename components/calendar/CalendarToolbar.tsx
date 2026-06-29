@@ -111,6 +111,7 @@ export default function CalendarToolbar({ currentDate, onNavigate }: CalendarToo
           title="Filter by Assigned Employee"
         >
           <option value="">All Employees</option>
+          <option value="unassigned">Unassigned Tasks</option>
           {users.map((u) => (
             <option key={u.id} value={u.id}>
               {u.full_name || u.email.split("@")[0]}
